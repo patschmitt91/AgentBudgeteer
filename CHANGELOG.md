@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `pytest-cov` and `pre-commit` pinned in the `dev` extra; coverage
+  configured through `[tool.pytest.ini_options].addopts` with
+  `--cov=src/budgeteer --cov-report=term-missing --cov-fail-under=85`.
+- `tests/test_cli_e2e.py` exercising the full `budgeteer` Typer CLI
+  (dry-run, forced strategy, executed single-agent run with a fake
+  adapter, `learn` command, repo scanner, policy path resolver).
+- `tests/test_adapters_and_worktree.py` covering the Anthropic adapter
+  streaming path, the `GitWorktreeManager` git and fallback branches,
+  and `TempDirWorktreeManager` lifecycle.
+- `tests/test_readme_examples.py` parsing README code blocks and
+  asserting every recognized shell command parses via `shlex` and its
+  executable resolves on PATH (or is a project CLI).
 - `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1).
 - `.pre-commit-config.yaml` wiring ruff, ruff-format, mypy (via
   `uv run mypy`), and the standard `pre-commit-hooks` whitespace /
