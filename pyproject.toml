@@ -24,7 +24,7 @@ dependencies = [
   "agent-framework-core>=1.1.1,<2",
   "anthropic>=0.40.0,<1",
   "openai>=1.50.0,<3",
-  "pciv @ git+https://github.com/patschmitt91/PCIV.git@2a64bfe0ea550925fb15c048588a5666509da2ab",
+  "pciv @ git+https://github.com/patschmitt91/PCIV.git@5c04e8e88d4294a2549a05e49031137a1160e77e",
   "pydantic>=2.9.0,<3",
   "pyyaml>=6.0.2,<7",
   "typer>=0.16,<1",

@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   status, what it does, why, install, quickstart with expected
   output, architecture Mermaid sequence, strategies table,
   configuration pointer, benchmarks, roadmap, license + BibTeX).
+- Bumped the `pciv` git pin from `2a64bfe` to `5c04e8e` so fresh
+  `uv sync` pulls in PCIV's Phase-1b and Phase-2 hygiene commits
+  (CoC, pre-commit, LICENSE, docs, ADRs).
 
 ## [0.1.0] — 2026-04-24
 
