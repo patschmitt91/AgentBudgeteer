@@ -1,0 +1,10 @@
+id: task_03_planning_heavy_design
+description: >
+  Design a retry policy. Write a spec. Implement the policy. Add tests.
+  Document the rationale. Verify with the existing integration suite.
+repo_fixture: fixtures/service_repo
+expected_strategy: pciv
+success_criteria:
+  - design document committed under docs/
+  - tests added and passing
+  - no regressions in existing suite

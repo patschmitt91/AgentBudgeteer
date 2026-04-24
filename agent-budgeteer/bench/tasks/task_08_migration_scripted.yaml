@@ -1,0 +1,11 @@
+id: task_08_migration_scripted
+description: >
+  Convert 30 files from YAML to TOML. Each file is independent and
+  parallel. No coupling between files.
+repo_fixture: fixtures/configs_repo
+repo_stats:
+  file_count: 30
+expected_strategy: fleet
+success_criteria:
+  - every .yaml file has a matching .toml
+  - content parses back to equivalent data

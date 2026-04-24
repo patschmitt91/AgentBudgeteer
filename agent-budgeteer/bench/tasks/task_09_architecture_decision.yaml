@@ -1,0 +1,10 @@
+id: task_09_architecture_decision
+description: >
+  Decide whether to adopt event sourcing for the orders service. Analyze
+  trade-offs. Design the event schema. Plan the migration. Evaluate
+  operational cost. Investigate failure modes. Document the recommendation.
+repo_fixture: fixtures/orders_repo
+expected_strategy: pciv
+success_criteria:
+  - ADR committed under docs/adr/
+  - recommendation is explicit

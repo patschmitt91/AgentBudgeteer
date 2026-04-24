@@ -1,0 +1,12 @@
+id: task_05_independent_parallel_docs
+description: >
+  Generate independent per-file docstring summaries across 20 files, one
+  per utility module. No cross-file coupling.
+repo_fixture: fixtures/utils_repo
+repo_stats:
+  file_count: 20
+  has_tests: false
+expected_strategy: fleet
+success_criteria:
+  - every module has a top-level docstring
+  - no module imports changed

@@ -1,0 +1,14 @@
+id: task_06_multi_file_feature
+description: >
+  Design the rate limiter interface. Refactor the two HTTP handlers to
+  accept injected dependencies. Implement the limiter. Debug any shared
+  state issues. Plan the rollout. Verify behavior under burst load.
+repo_fixture: fixtures/service_repo
+repo_stats:
+  has_tests: true
+  file_count: 4
+expected_strategy: pciv
+success_criteria:
+  - rate limiter module added
+  - two handlers use it
+  - tests cover burst and steady-state

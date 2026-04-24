@@ -1,0 +1,10 @@
+id: task_02_cross_cutting_rename
+description: >
+  Rename the User type to Account across the entire repository. Update
+  every import that depends on the shared module.
+repo_fixture: fixtures/coupled_repo
+expected_strategy: single
+success_criteria:
+  - no references to User remain
+  - tests pass
+  - type check passes

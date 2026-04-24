@@ -1,0 +1,10 @@
+id: task_01_single_file_refactor
+description: >
+  Simplify the helper in src/utils.py by collapsing the two overlapping
+  branches into one. Keep behavior identical.
+repo_fixture: fixtures/empty_repo
+expected_strategy: single
+success_criteria:
+  - unit tests in tests/test_utils.py still pass
+  - no new dependencies
+  - diff touches only src/utils.py

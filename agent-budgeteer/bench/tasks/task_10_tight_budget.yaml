@@ -1,0 +1,12 @@
+id: task_10_tight_budget
+description: >
+  Debug and fix the off-by-one in the pagination helper. Tests exist.
+repo_fixture: fixtures/service_repo
+budget_hint_usd: 0.20
+expected_strategy: single
+success_criteria:
+  - test_pagination passes
+  - fix is minimal
+notes: >
+  Budget is below the tight-budget threshold, so the router drops to the
+  Sonnet fallback even though the task is reasoning-heavy with tests.

@@ -1,0 +1,70 @@
+version: 1
+
+# Pricing in USD per 1M tokens. Update as provider pricing changes.
+pricing:
+  claude-opus-4-7:
+    input_per_mtok: 15.00
+    output_per_mtok: 75.00
+  claude-sonnet-4-6:
+    input_per_mtok: 3.00
+    output_per_mtok: 15.00
+  gpt-5.4:
+    input_per_mtok: 2.50
+    output_per_mtok: 10.00
+  gpt-5.3-codex:
+    input_per_mtok: 1.25
+    output_per_mtok: 5.00
+
+# Defaults used by strategies if no override is supplied.
+model_defaults:
+  single_agent_primary: claude-opus-4-7
+  single_agent_fallback: claude-sonnet-4-6
+  pciv_planner: gpt-5.4
+  pciv_implementer: gpt-5.3-codex
+  fleet_worker: claude-sonnet-4-6
+
+# Path to the pciv project's config file. Resolved relative to this policy
+# file unless absolute. Used by the PCIV strategy.
+pciv:
+  config_path: ../../PCIV/plan.yaml
+
+fleet:
+  max_workers: 4
+  per_shard_max_tokens: 2048
+  sqlite_path: .budgeteer/fleet.db
+
+# Output-token projection coefficients per strategy. Tune these to match
+# measured behaviour of your models before BudgetGovernor projects costs.
+projection:
+  single_base: 1500
+  single_per_planning_step: 200
+  pciv_multiplier: 3
+  pciv_per_planning_step: 300
+  fleet_per_shard: 1500
+  fleet_max_shards: 16
+
+# Classifier wordlists. Override to tune the heuristic without code changes.
+# Empty or missing lists fall back to the defaults baked into classifier.py.
+classifier:
+  reasoning_tokens: []
+  mechanical_tokens: []
+  imperative_verbs: []
+
+# Decision tree thresholds for policy v0.
+routing:
+  large_context_token_threshold: 600000
+  tight_budget_usd: 0.50
+  short_latency_seconds: 120
+  fleet_min_file_count: 8
+  fleet_max_coupling: 0.30
+  pciv_min_reasoning_ratio: 0.60
+  pciv_min_planning_depth: 5
+
+# Degradation: if projected_cost > ratio * budget_remaining, swap
+# non-planning step models from the "from" list to "to".
+degradation:
+  trigger_ratio: 0.70
+  swap:
+    - from: claude-opus-4-7
+      to: claude-sonnet-4-6
+      protect_roles: ["planner", "critic"]

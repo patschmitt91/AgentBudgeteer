@@ -1,0 +1,13 @@
+id: task_07_debug_with_tests
+description: >
+  Debug the flaky test in tests/test_scheduler.py. Investigate the root
+  cause, analyze the race, and fix the scheduler without weakening the
+  assertion.
+repo_fixture: fixtures/scheduler_repo
+repo_stats:
+  has_tests: true
+  file_count: 2
+expected_strategy: pciv
+success_criteria:
+  - test passes 100 runs in a row
+  - assertion unchanged or stronger

@@ -1,0 +1,13 @@
+id: task_04_large_context_audit
+description: >
+  Audit the entire monorepo for any place that still reads the deprecated
+  LEGACY_TOKEN environment variable and produce a report of call sites
+  and a migration plan.
+repo_fixture: fixtures/large_monorepo
+expected_strategy: single
+success_criteria:
+  - report lists every call site
+  - migration plan names the replacement variable
+notes: >
+  The repo exceeds the large-context threshold so only the Opus 4.7 single
+  agent can hold the whole context.

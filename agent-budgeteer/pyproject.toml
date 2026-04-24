@@ -1,0 +1,100 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-budgeteer"
+version = "0.1.0"
+description = "Runtime orchestration router that selects single-agent, PCIV, or Fleet strategies on top of microsoft/agent-framework based on task features and budget."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "agent-budgeteer contributors" }]
+keywords = ["agent-framework", "ai", "routing", "orchestration"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Typing :: Typed",
+]
+
+dependencies = [
+  "agent-framework-core>=1.1.1,<2",
+  "anthropic>=0.40.0,<1",
+  "openai>=1.50.0,<3",
+  "pciv",
+  "pydantic>=2.9.0,<3",
+  "pyyaml>=6.0.2,<7",
+  "typer>=0.16,<1",
+  "opentelemetry-api>=1.39.0,<2",
+  "opentelemetry-sdk>=1.39.0,<2",
+  "azure-monitor-opentelemetry>=1.8.0,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "ruff==0.6.9",
+  "mypy==1.11.2",
+  "pytest==8.3.3",
+  "pytest-asyncio==0.24.0",
+  "types-PyYAML==6.0.12.20240917",
+]
+learn = [
+  "scikit-learn>=1.4,<2",
+  "numpy>=1.26,<3",
+]
+
+[project.urls]
+Homepage = "https://example.com/agent-budgeteer"
+Repository = "https://example.com/agent-budgeteer"
+Issues = "https://example.com/agent-budgeteer/issues"
+
+[project.scripts]
+budgeteer = "budgeteer.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/budgeteer"]
+
+[tool.uv]
+prerelease = "allow"
+
+[tool.uv.sources]
+pciv = { path = "../../PCIV", editable = true }
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "W"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+packages = ["budgeteer"]
+mypy_path = "src"
+namespace_packages = true
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = [
+  "agent_framework.*",
+  "azure.monitor.*",
+  "opentelemetry.*",
+  "anthropic.*",
+  "openai.*",
+  "pciv.*",
+  "sklearn.*",
+  "numpy.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
