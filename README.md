@@ -121,6 +121,30 @@ Dated milestones live in [docs/roadmap.md](docs/roadmap.md). The next
 milestone (v0.2) is the learned decision-tree policy trained on bench
 outcomes plus live-provider bench results.
 
+## Development
+
+Common tasks are wired through a top-level [`justfile`](justfile). Install
+[`just`](https://github.com/casey/just), then:
+
+```
+just install     # uv sync --extra dev --extra learn
+just lint        # ruff check
+just fmt         # ruff format
+just typecheck   # mypy
+just test        # pytest with coverage gate
+just cov         # pytest + coverage XML
+just build       # uv build (sdist + wheel into dist/)
+just clean       # remove dist/, caches, .coverage
+```
+
+`just` is not required — each recipe is a one-liner that shells out to
+`uv`, so the underlying commands can be run directly.
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for supported versions and how to report
+a vulnerability privately.
+
 ## License and citation
 
 MIT — see [LICENSE](LICENSE). If you cite this project in academic work:

@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build:
-    name: build wheel and upload
+    name: build wheel and sdist
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -24,8 +24,35 @@ jobs:
       - name: Set up Python
         run: uv python install 3.12
 
+      - name: Sync dev extra
+        run: uv sync --extra dev
+
       - name: Build
         run: uv build
+
+      - name: twine check
+        run: uv run twine check dist/*
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  release:
+    name: upload to GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

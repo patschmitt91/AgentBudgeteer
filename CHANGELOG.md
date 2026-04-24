@@ -8,6 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `SECURITY.md` at the repo root: supported-versions table, private
+  reporting channels (GitHub private advisories + maintainer email),
+  and a 90-day coordinated-disclosure window. Linked from the README.
+- Top-level `justfile` with `install`, `lint`, `fmt`, `typecheck`,
+  `test`, `cov`, `build`, and `clean` recipes; all shell out to `uv`.
+  README has a new `Development` section documenting the recipes.
+- `src/budgeteer/py.typed` marker, force-included in the wheel via
+  `[tool.hatch.build.targets.wheel.force-include]` so downstream type
+  checkers pick up the package as typed.
+- `[project.urls]` now includes `Homepage`, `Source`, `Issues`, and
+  `Changelog` (previously only `Homepage`, `Repository`, `Issues`).
+- `twine==5.1.1` pinned in the `dev` extra.
+- CI `build` job on ubuntu-latest runs `uv build` followed by
+  `uv run twine check dist/*` and uploads `dist/` as an artifact.
+- `release.yml` split into `build` (runs `uv build` + `twine check` +
+  uploads `dist/` artifact) and `release` (downloads the artifact and
+  creates the GitHub Release via `softprops/action-gh-release@v2`).
+  The release job `needs: build`, so twine metadata failures block
+  the GitHub Release.
 - `.github/workflows/release.yml` — on tag `v*`, build the wheel with
   `uv build` and upload it as a GitHub Release asset (no PyPI publish).
 - CI `type-check` job runs `uv run mypy` independently on
@@ -55,6 +74,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bumped the `pciv` git pin from `2a64bfe` to `5c04e8e` so fresh
   `uv sync` pulls in PCIV's Phase-1b and Phase-2 hygiene commits
   (CoC, pre-commit, LICENSE, docs, ADRs).
+- Bumped classifier from `Development Status :: 3 - Alpha` to
+  `Development Status :: 4 - Beta` and added
+  `Operating System :: OS Independent`.
 
 ## [0.1.0] — 2026-04-24
 
