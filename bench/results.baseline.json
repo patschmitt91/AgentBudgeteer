@@ -1,0 +1,245 @@
+{
+  "total": 10,
+  "matched": 10,
+  "mismatched": 0,
+  "accuracy": 1.0,
+  "by_strategy": {
+    "single": {
+      "matched": 4,
+      "mismatched": 0
+    },
+    "pciv": {
+      "matched": 4,
+      "mismatched": 0
+    },
+    "fleet": {
+      "matched": 2,
+      "mismatched": 0
+    }
+  },
+  "total_projected_cost_usd": 1.317955,
+  "total_baseline_single_cost_usd": 1.450908,
+  "total_savings_vs_single": 0.132953,
+  "results": [
+    {
+      "task_id": "task_01_single_file_refactor",
+      "expected_strategy": "single",
+      "actual_strategy": "single",
+      "actual_model": "anthropic-primary",
+      "routing_reason": "default",
+      "match": true,
+      "features": {
+        "estimated_file_count": 1,
+        "cross_file_dependency_score": 0.2,
+        "test_presence": false,
+        "type_safety_signal": false,
+        "planning_depth_score": 0,
+        "reasoning_vs_mechanical_score": 0.0,
+        "estimated_input_tokens": 28
+      },
+      "projected_cost_usd": 0.11292,
+      "projected_cost_baseline_single": 0.11292,
+      "projected_savings_vs_single": 0.0,
+      "degraded": false,
+      "notes": null
+    },
+    {
+      "task_id": "task_02_cross_cutting_rename",
+      "expected_strategy": "single",
+      "actual_strategy": "single",
+      "actual_model": "anthropic-primary",
+      "routing_reason": "default",
+      "match": true,
+      "features": {
+        "estimated_file_count": 1,
+        "cross_file_dependency_score": 0.65,
+        "test_presence": false,
+        "type_safety_signal": false,
+        "planning_depth_score": 2,
+        "reasoning_vs_mechanical_score": 0.0,
+        "estimated_input_tokens": 29
+      },
+      "projected_cost_usd": 0.142935,
+      "projected_cost_baseline_single": 0.142935,
+      "projected_savings_vs_single": 0.0,
+      "degraded": false,
+      "notes": null
+    },
+    {
+      "task_id": "task_03_planning_heavy_design",
+      "expected_strategy": "pciv",
+      "actual_strategy": "pciv",
+      "actual_model": "azure-reasoning",
+      "routing_reason": "reasoning_heavy_or_deep_plan",
+      "match": true,
+      "features": {
+        "estimated_file_count": 1,
+        "cross_file_dependency_score": 0.2,
+        "test_presence": false,
+        "type_safety_signal": false,
+        "planning_depth_score": 6,
+        "reasoning_vs_mechanical_score": 0.5,
+        "estimated_input_tokens": 34
+      },
+      "projected_cost_usd": 0.04731,
+      "projected_cost_baseline_single": 0.20301,
+      "projected_savings_vs_single": 0.1557,
+      "degraded": false,
+      "notes": null
+    },
+    {
+      "task_id": "task_04_large_context_audit",
+      "expected_strategy": "single",
+      "actual_strategy": "single",
+      "actual_model": "anthropic-primary",
+      "routing_reason": "default",
+      "match": true,
+      "features": {
+        "estimated_file_count": 1,
+        "cross_file_dependency_score": 0.2,
+        "test_presence": false,
+        "type_safety_signal": false,
+        "planning_depth_score": 1,
+        "reasoning_vs_mechanical_score": 1.0,
+        "estimated_input_tokens": 40
+      },
+      "projected_cost_usd": 0.1281,
+      "projected_cost_baseline_single": 0.1281,
+      "projected_savings_vs_single": 0.0,
+      "degraded": false,
+      "notes": "The repo exceeds the large-context threshold so only the Opus 4.7 single agent can hold the whole context.\n"
+    },
+    {
+      "task_id": "task_05_independent_parallel_docs",
+      "expected_strategy": "fleet",
+      "actual_strategy": "fleet",
+      "actual_model": "anthropic-fallback",
+      "routing_reason": "many_independent_files",
+      "match": true,
+      "features": {
+        "estimated_file_count": 20,
+        "cross_file_dependency_score": 0.15,
+        "test_presence": false,
+        "type_safety_signal": false,
+        "planning_depth_score": 1,
+        "reasoning_vs_mechanical_score": 0.0,
+        "estimated_input_tokens": 28
+      },
+      "projected_cost_usd": 0.360336,
+      "projected_cost_baseline_single": 0.12792,
+      "projected_savings_vs_single": -0.232416,
+      "degraded": false,
+      "notes": null
+    },
+    {
+      "task_id": "task_06_multi_file_feature",
+      "expected_strategy": "pciv",
+      "actual_strategy": "pciv",
+      "actual_model": "azure-reasoning",
+      "routing_reason": "reasoning_heavy_or_deep_plan",
+      "match": true,
+      "features": {
+        "estimated_file_count": 1,
+        "cross_file_dependency_score": 0.35,
+        "test_presence": true,
+        "type_safety_signal": false,
+        "planning_depth_score": 6,
+        "reasoning_vs_mechanical_score": 1.0,
+        "estimated_input_tokens": 51
+      },
+      "projected_cost_usd": 0.04734,
+      "projected_cost_baseline_single": 0.203265,
+      "projected_savings_vs_single": 0.155925,
+      "degraded": false,
+      "notes": null
+    },
+    {
+      "task_id": "task_07_debug_with_tests",
+      "expected_strategy": "pciv",
+      "actual_strategy": "pciv",
+      "actual_model": "azure-reasoning",
+      "routing_reason": "reasoning_heavy_or_deep_plan",
+      "match": true,
+      "features": {
+        "estimated_file_count": 1,
+        "cross_file_dependency_score": 0.2,
+        "test_presence": true,
+        "type_safety_signal": false,
+        "planning_depth_score": 3,
+        "reasoning_vs_mechanical_score": 1.0,
+        "estimated_input_tokens": 37
+      },
+      "projected_cost_usd": 0.040568,
+      "projected_cost_baseline_single": 0.158055,
+      "projected_savings_vs_single": 0.117487,
+      "degraded": false,
+      "notes": null
+    },
+    {
+      "task_id": "task_08_migration_scripted",
+      "expected_strategy": "fleet",
+      "actual_strategy": "fleet",
+      "actual_model": "anthropic-fallback",
+      "routing_reason": "many_independent_files",
+      "match": true,
+      "features": {
+        "estimated_file_count": 30,
+        "cross_file_dependency_score": 0.15,
+        "test_presence": false,
+        "type_safety_signal": false,
+        "planning_depth_score": 1,
+        "reasoning_vs_mechanical_score": 0.0,
+        "estimated_input_tokens": 25
+      },
+      "projected_cost_usd": 0.3603,
+      "projected_cost_baseline_single": 0.127875,
+      "projected_savings_vs_single": -0.232425,
+      "degraded": false,
+      "notes": null
+    },
+    {
+      "task_id": "task_09_architecture_decision",
+      "expected_strategy": "pciv",
+      "actual_strategy": "pciv",
+      "actual_model": "azure-reasoning",
+      "routing_reason": "reasoning_heavy_or_deep_plan",
+      "match": true,
+      "features": {
+        "estimated_file_count": 1,
+        "cross_file_dependency_score": 0.2,
+        "test_presence": false,
+        "type_safety_signal": false,
+        "planning_depth_score": 7,
+        "reasoning_vs_mechanical_score": 1.0,
+        "estimated_input_tokens": 52
+      },
+      "projected_cost_usd": 0.049598,
+      "projected_cost_baseline_single": 0.21828,
+      "projected_savings_vs_single": 0.168682,
+      "degraded": false,
+      "notes": null
+    },
+    {
+      "task_id": "task_10_tight_budget",
+      "expected_strategy": "single",
+      "actual_strategy": "single",
+      "actual_model": "anthropic-fallback",
+      "routing_reason": "tight_budget",
+      "match": true,
+      "features": {
+        "estimated_file_count": 1,
+        "cross_file_dependency_score": 0.2,
+        "test_presence": false,
+        "type_safety_signal": false,
+        "planning_depth_score": 2,
+        "reasoning_vs_mechanical_score": 1.0,
+        "estimated_input_tokens": 16
+      },
+      "projected_cost_usd": 0.028548,
+      "projected_cost_baseline_single": 0.028548,
+      "projected_savings_vs_single": 0.0,
+      "degraded": false,
+      "notes": "Budget is below the tight-budget threshold, so the router drops to the Sonnet fallback even though the task is reasoning-heavy with tests.\n"
+    }
+  ]
+}

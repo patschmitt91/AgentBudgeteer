@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `.github/workflows/release.yml` — on tag `v*`, build the wheel with
+  `uv build` and upload it as a GitHub Release asset (no PyPI publish).
+- CI `type-check` job runs `uv run mypy` independently on
+  ubuntu-latest and windows-latest, so type errors no longer hide
+  inside the test matrix.
+- CI `pre-commit` job runs `pre-commit run --all-files` on every push
+  and PR.
+- CI `docs-check` job runs `lycheeverse/lychee-action@v2` against
+  `README.md`, `docs/**/*.md`, and `bench/**/*.md`.
+- CI `bench-smoke` job runs `uv run python -m bench.smoke` (dry-run,
+  one-minute timeout) and fails if routing accuracy or any per-strategy
+  matched count regresses against `bench/results.baseline.json`.
+- `bench/__init__.py` and `bench/smoke.py` to support the smoke check.
+- `bench/results.baseline.json` — current baseline (10/10 matched,
+  accuracy 1.0).
 - `pytest-cov` and `pre-commit` pinned in the `dev` extra; coverage
   configured through `[tool.pytest.ini_options].addopts` with
   `--cov=src/budgeteer --cov-report=term-missing --cov-fail-under=85`.

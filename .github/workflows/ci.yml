@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
 
@@ -32,7 +32,7 @@ jobs:
         run: uv python install ${{ matrix.python }}
 
       - name: Sync
-        run: uv sync --extra dev
+        run: uv sync --extra dev --extra learn
 
       - name: Lint
         run: uv run ruff check src tests
@@ -40,11 +40,8 @@ jobs:
       - name: Format check
         run: uv run ruff format --check src tests
 
-      - name: Type check
-        run: uv run mypy
-
       - name: Tests
-        run: uv run pytest --cov=src --cov-report=xml --cov-report=term -q
+        run: uv run pytest --cov=src/budgeteer --cov-report=xml --cov-report=term -q
 
       - name: Upload coverage artifact
         if: always()
@@ -53,3 +50,84 @@ jobs:
           name: coverage-${{ matrix.os }}-py${{ matrix.python }}
           path: coverage.xml
           if-no-files-found: ignore
+
+  type-check:
+    name: type-check (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync
+        run: uv sync --extra dev --extra learn
+
+      - name: mypy
+        run: uv run mypy
+
+  pre-commit:
+    name: pre-commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync
+        run: uv sync --extra dev
+
+      - name: Run pre-commit
+        run: uv run pre-commit run --all-files --show-diff-on-failure
+
+  docs-check:
+    name: docs-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: lychee link check
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --no-progress --verbose --max-concurrency 4 README.md 'docs/**/*.md' 'bench/**/*.md'
+          fail: true
+
+  bench-smoke:
+    name: bench-smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync
+        run: uv sync --extra dev --extra learn
+
+      - name: Run bench smoke
+        timeout-minutes: 1
+        run: uv run python -m bench.smoke
