@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1).
+- `.pre-commit-config.yaml` wiring ruff, ruff-format, mypy (via
+  `uv run mypy`), and the standard `pre-commit-hooks` whitespace /
+  merge-conflict / toml / yaml checks.
+
 ## [0.1.0] — 2026-04-24
 
 ### Added
