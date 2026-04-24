@@ -5,9 +5,11 @@ pciv workflow owns its own governor, ledger, and telemetry. This strategy
 translates the pciv run report into Budgeteer's uniform StrategyResult and
 charges the actual spend against the Budgeteer budget governor.
 
-pciv phases 3 (Implement) and 4 (Verify) are still marked TODO inside the
-pciv project itself. Budgeteer treats a phase-2 pass (critique not
-blocking) as success for v0 so the two projects can evolve in lockstep.
+All four pciv phases (Plan, Critique, Implement, Verify) are implemented
+upstream. A run is considered successful when the verify phase returns a
+``ship`` verdict for every in-scope subtask; ``iterate`` rounds are bounded
+by ``max_iter`` in the pciv config and ``reject`` surfaces as a failed
+``StrategyResult`` with the verify report attached.
 """
 
 from __future__ import annotations

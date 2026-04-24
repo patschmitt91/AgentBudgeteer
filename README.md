@@ -60,6 +60,31 @@ agent-framework agents across git worktrees.
 - Not a new agent runtime
 - Not a prompt library
 
+## Current status (v0)
+
+Wired and exercised end-to-end (with mocked adapters in tests):
+
+- Router, classifier, policy, and budget governor
+- `SingleAgent` strategy against the Anthropic adapter
+- `Fleet` strategy with SQLite ledger, sharding, and git-worktree workers
+- `PCIV` strategy delegating to the `pciv` sibling project
+
+Built but not yet wired into the default CLI path:
+
+- `adapters/azure_openai_adapter.py` — satisfies the `StreamingChatClient`
+  protocol but no router flag selects it yet.
+- `learning.py` — trains a `DecisionTreeClassifier` policy from labeled
+  examples; the router still uses the hand-tuned YAML decision tree.
+
+Known gaps called out honestly:
+
+- `bench/` validates routing accuracy only; it does not run real models
+  or scan real repos. See `bench/README.md`.
+- All tests stub at the adapter boundary. There are no HTTP-level
+  integration tests yet.
+- The classifier uses regex and wordlists only. A learned or
+  LLM-extracted feature path is planned.
+
 ## Repository layout
 
 ```
