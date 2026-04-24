@@ -190,10 +190,18 @@ class BudgetGovernor:
             raise ValueError("cost_usd must be non-negative")
         with self._lock:
             self._spent += cost_usd
-            if self._spent > self._hard_cap:
-                raise BudgetExceeded(
-                    f"spent {self._spent:.4f} exceeds hard cap {self._hard_cap:.4f}"
-                )
+            over_cap = self._spent > self._hard_cap
+        # Emit the metric outside the lock so a slow exporter cannot
+        # block other strategies that also hold budget state.
+        try:
+            from budgeteer.telemetry import budget_usd_spent_total
+
+            budget_usd_spent_total().add(float(cost_usd))
+        except Exception:
+            # Telemetry must never break accounting.
+            pass
+        if over_cap:
+            raise BudgetExceeded(f"spent {self._spent:.4f} exceeds hard cap {self._hard_cap:.4f}")
 
 
 def _projected_output_tokens(

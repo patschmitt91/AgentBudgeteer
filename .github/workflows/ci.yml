@@ -162,3 +162,16 @@ jobs:
           name: dist
           path: dist/
           if-no-files-found: error
+
+  docker:
+    name: docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t agent-budgeteer:ci .
+
+      - name: Run doctor in container
+        run: docker run --rm agent-budgeteer:ci doctor

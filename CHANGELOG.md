@@ -8,6 +8,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Structured logging: `JsonFormatter` in `src/budgeteer/telemetry.py`
+  emits `ts`, `level`, `logger`, `msg`, plus `run_id`, `trace_id`, and
+  `span_id` when an OTel span is active. Root CLI callback accepts
+  `--verbose`/`--quiet` for DEBUG/WARNING, honors `LOG_FORMAT=json|text`
+  (default `text` on a TTY, `json` otherwise), and attaches a
+  `RedactionFilter` to every handler.
+- Central redaction helper `src/budgeteer/redaction.py` scrubbing `sk-`
+  API keys, bearer tokens, JWTs, 40+ char hex blobs, and literal values
+  of secret-named env vars (`AZURE_OPENAI_API_KEY`, `ANTHROPIC_API_KEY`,
+  `OPENAI_API_KEY`, `APPLICATIONINSIGHTS_CONNECTION_STRING`, and any
+  name containing `KEY`/`SECRET`/`TOKEN`/`PASSWORD`/`CONNECTION_STRING`).
+  Applied to log records and to span attribute dicts via `redact_mapping`.
+- `tests/test_secret_redaction.py` seeds three distinct secret shapes
+  (sk- key, bearer token, JWT) into env + the task prompt, runs the
+  full dry-run pipeline, and asserts zero occurrences in captured logs
+  or span attributes / events.
+- `budgeteer doctor` subcommand: reports Python version, `uv` version,
+  git availability, OS, policy resolution, and redacted env-var
+  presence as JSON. Exits 0 only when python/uv/git/config checks pass.
+- OTel counters in `budgeteer.telemetry`: `runs_total`,
+  `runs_failed_total`, `budget_usd_spent_total`,
+  `routing_decisions_total{strategy}`. `tests/test_metrics.py` uses an
+  `InMemoryMetricReader` to assert each name appears after CLI
+  invocations.
+- Multi-stage `Dockerfile` at the repo root: builder uses `uv sync
+  --no-dev --frozen`; runtime is `python:3.12-slim`, non-root uid 1001,
+  healthcheck runs `budgeteer doctor`. `.dockerignore` excludes
+  `.venv`, `.git`, `dist`, `tests`, `docs`, and caches.
+- CI `docker` job builds the image on `ubuntu-latest` and runs
+  `docker run --rm <image> doctor`; nothing is pushed.
+
 - `SECURITY.md` at the repo root: supported-versions table, private
   reporting channels (GitHub private advisories + maintainer email),
   and a 90-day coordinated-disclosure window. Linked from the README.

@@ -3,13 +3,22 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
+import platform
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
 import typer
 
 from budgeteer.router import Router
+from budgeteer.telemetry import (
+    configure_logging,
+    runs_failed_total,
+    runs_total,
+)
 from budgeteer.types import RepoSnapshot
 
 app = typer.Typer(
@@ -114,6 +123,92 @@ def version() -> None:
     typer.echo(__version__)
 
 
+_VERBOSE_OPT = typer.Option(False, "--verbose", "-v", help="DEBUG-level logs.")
+_QUIET_OPT = typer.Option(False, "--quiet", "-q", help="Only WARNING+ logs.")
+
+
+@app.callback()
+def _root(
+    verbose: bool = _VERBOSE_OPT,
+    quiet: bool = _QUIET_OPT,
+) -> None:
+    """Configure root logger based on verbosity flags and ``LOG_FORMAT`` env."""
+
+    if verbose and quiet:
+        typer.echo("--verbose and --quiet are mutually exclusive", err=True)
+        raise typer.Exit(code=2)
+    if verbose:
+        level = logging.DEBUG
+    elif quiet:
+        level = logging.WARNING
+    else:
+        level = logging.INFO
+    configure_logging(level=level)
+
+
+def _check(label: str, ok: bool, detail: str) -> dict[str, object]:
+    return {"check": label, "ok": ok, "detail": detail}
+
+
+def _tool_version(executable: str, *args: str) -> str | None:
+    path = shutil.which(executable)
+    if path is None:
+        return None
+    try:
+        proc = subprocess.run(
+            [path, *args], capture_output=True, text=True, timeout=10, check=False
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    out = (proc.stdout or proc.stderr or "").strip().splitlines()
+    return out[0] if out else executable
+
+
+@app.command()
+def doctor() -> None:
+    """Print environment diagnostics. Exit 0 if all hard checks pass."""
+
+    from budgeteer.redaction import REDACTED
+
+    results: list[dict[str, object]] = []
+
+    py = sys.version.split()[0]
+    results.append(_check("python", sys.version_info >= (3, 11), f"python {py}"))
+
+    uv_ver = _tool_version("uv", "--version")
+    results.append(_check("uv", uv_ver is not None, uv_ver or "not found"))
+
+    git_ver = _tool_version("git", "--version")
+    results.append(_check("git", git_ver is not None, git_ver or "not found"))
+
+    results.append(_check("os", True, f"{platform.system()} {platform.release()}"))
+
+    try:
+        policy = _default_policy_path()
+        results.append(_check("config", policy.is_file(), f"policy.yaml at {policy}"))
+    except Exception as exc:
+        results.append(_check("config", False, f"resolution failed: {exc}"))
+
+    env_names = (
+        "ANTHROPIC_API_KEY",
+        "AZURE_OPENAI_API_KEY",
+        "OPENAI_API_KEY",
+        "APPLICATIONINSIGHTS_CONNECTION_STRING",
+    )
+    env_report: dict[str, str] = {}
+    for name in env_names:
+        val = os.environ.get(name)
+        env_report[name] = REDACTED if val else "unset"
+    results.append(_check("env", True, json.dumps(env_report)))
+
+    hard = {"python", "uv", "git", "config"}
+    all_ok = all(r["ok"] for r in results if r["check"] in hard)
+
+    payload = {"ok": all_ok, "checks": results}
+    typer.echo(json.dumps(payload, indent=2))
+    raise typer.Exit(code=0 if all_ok else 1)
+
+
 _TRAIN_DATA_ARG = typer.Argument(
     ...,
     help="Path to a bench results.json, a labeled list.json, or JSONL training data.",
@@ -198,6 +293,8 @@ def run(
         typer.echo(f"policy file not found: {policy_path}", err=True)
         raise typer.Exit(code=2)
 
+    runs_total().add(1)
+
     repo_root = repo if repo is not None else Path.cwd()
     snapshot = _scan_repo(repo_root)
     router = Router(
@@ -243,6 +340,7 @@ def run(
     }
     typer.echo(json.dumps(payload, indent=2, default=str))
     if not outcome.result.success:
+        runs_failed_total().add(1)
         sys.exit(1)
 
 

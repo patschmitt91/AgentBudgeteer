@@ -1,21 +1,39 @@
-"""OpenTelemetry setup. Exports to Azure App Insights when configured."""
+"""OpenTelemetry tracing + metrics + structured logging.
+
+The single public surface is small: :func:`configure` to install a tracer
+provider, :func:`configure_logging` to install the root logger format
+(JSON or text) plus a secret-redaction filter, :func:`get_tracer` for
+span helpers, and the module-level counters declared under the
+``Metrics`` section below.
+
+Counters are created lazily via an idempotent accessor; the OpenTelemetry
+API returns no-op counters when no meter provider is configured, so this
+is safe to call in tests and production alike.
+"""
 
 from __future__ import annotations
 
+import json
 import logging
 import os
+import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
 
-from opentelemetry import trace
+from opentelemetry import metrics, trace
+from opentelemetry.metrics import Counter
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
 
+from budgeteer.redaction import RedactionFilter, redact
+
 _LOG = logging.getLogger(__name__)
 _TRACER_NAME = "agent-budgeteer"
+_METER_NAME = "agent-budgeteer"
 _configured = False
+_logging_configured = False
 
 
 def configure(service_name: str = "agent-budgeteer") -> None:
@@ -50,7 +68,7 @@ def configure(service_name: str = "agent-budgeteer") -> None:
             )
             _configured = True
             return
-        except Exception as exc:  # pragma: no cover - best effort
+        except Exception as exc:
             _LOG.warning("azure monitor setup failed, falling back to silent: %s", exc)
 
     provider = TracerProvider(resource=resource)
@@ -84,3 +102,202 @@ def strategy_span(strategy: str, task_id: str, **attributes: Any) -> Iterator[tr
         for k, v in attributes.items():
             span.set_attribute(k, v)
         yield span
+
+
+# ---------------------------------------------------------------------------
+# Structured logging
+# ---------------------------------------------------------------------------
+
+
+_STANDARD_LOGRECORD_FIELDS = frozenset(
+    {
+        "name",
+        "msg",
+        "args",
+        "levelname",
+        "levelno",
+        "pathname",
+        "filename",
+        "module",
+        "exc_info",
+        "exc_text",
+        "stack_info",
+        "lineno",
+        "funcName",
+        "created",
+        "msecs",
+        "relativeCreated",
+        "thread",
+        "threadName",
+        "processName",
+        "process",
+        "taskName",
+        "message",
+        "asctime",
+    }
+)
+
+
+class JsonFormatter(logging.Formatter):
+    """Minimal JSON log formatter.
+
+    Emits ``ts`` (ISO8601 with UTC offset), ``level``, ``logger``, ``msg``,
+    plus ``run_id`` / ``trace_id`` / ``span_id`` when they are in the
+    current OTel span context or attached to the record via ``extra=``.
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        payload: dict[str, Any] = {
+            "ts": self.formatTime(record, datefmt="%Y-%m-%dT%H:%M:%S%z"),
+            "level": record.levelname,
+            "logger": record.name,
+            "msg": redact(record.getMessage()),
+        }
+
+        run_id = getattr(record, "run_id", None)
+        if run_id is not None:
+            payload["run_id"] = str(run_id)
+
+        span = trace.get_current_span()
+        ctx = span.get_span_context() if span is not None else None
+        if ctx is not None and ctx.is_valid:
+            payload["trace_id"] = format(ctx.trace_id, "032x")
+            payload["span_id"] = format(ctx.span_id, "016x")
+
+        # Carry through any non-standard attributes supplied via ``extra``.
+        for key, value in record.__dict__.items():
+            if key in _STANDARD_LOGRECORD_FIELDS or key.startswith("_"):
+                continue
+            if key in payload:
+                continue
+            try:
+                json.dumps(value)
+            except TypeError:
+                value = str(value)
+            payload[key] = value
+
+        if record.exc_info:
+            payload["exc"] = redact(self.formatException(record.exc_info))
+
+        return json.dumps(payload, separators=(",", ":"), sort_keys=False)
+
+
+def _resolve_log_format(explicit: str | None) -> str:
+    if explicit:
+        return explicit.lower()
+    env = os.environ.get("LOG_FORMAT")
+    if env:
+        return env.strip().lower()
+    return "text" if sys.stderr.isatty() else "json"
+
+
+def configure_logging(
+    level: int = logging.INFO,
+    fmt: str | None = None,
+    *,
+    force: bool = False,
+) -> None:
+    """Install a stderr handler with either a JSON or text formatter.
+
+    ``LOG_FORMAT=json`` / ``LOG_FORMAT=text`` overrides auto-detection; by
+    default a TTY gets text, anything else gets JSON. Always attaches
+    :class:`~budgeteer.redaction.RedactionFilter` so secret-shaped
+    substrings are scrubbed before a record is emitted.
+    """
+
+    global _logging_configured
+    root = logging.getLogger()
+    if _logging_configured and not force:
+        root.setLevel(level)
+        return
+
+    for h in list(root.handlers):
+        if getattr(h, "_budgeteer_handler", False):
+            root.removeHandler(h)
+
+    handler = logging.StreamHandler(stream=sys.stderr)
+    chosen = _resolve_log_format(fmt)
+    if chosen == "json":
+        handler.setFormatter(JsonFormatter())
+    else:
+        handler.setFormatter(
+            logging.Formatter(
+                fmt="%(asctime)s %(levelname)s %(name)s %(message)s",
+                datefmt="%Y-%m-%dT%H:%M:%S",
+            )
+        )
+    handler.addFilter(RedactionFilter())
+    handler._budgeteer_handler = True  # type: ignore[attr-defined]
+    root.addHandler(handler)
+    root.setLevel(level)
+    _logging_configured = True
+
+
+# ---------------------------------------------------------------------------
+# Metrics (counters only)
+# ---------------------------------------------------------------------------
+
+
+_counters: dict[str, Counter] = {}
+_meter_provider_override: metrics.MeterProvider | None = None
+
+
+def _meter() -> metrics.Meter:
+    if _meter_provider_override is not None:
+        return _meter_provider_override.get_meter(_METER_NAME)
+    return metrics.get_meter(_METER_NAME)
+
+
+def _counter(name: str, *, unit: str = "1", description: str = "") -> Counter:
+    existing = _counters.get(name)
+    if existing is not None:
+        return existing
+    c = _meter().create_counter(name=name, unit=unit, description=description)
+    _counters[name] = c
+    return c
+
+
+def runs_total() -> Counter:
+    return _counter("runs_total", description="Total runs started.")
+
+
+def runs_failed_total() -> Counter:
+    return _counter("runs_failed_total", description="Runs that ended in failure.")
+
+
+def budget_usd_spent_total() -> Counter:
+    return _counter(
+        "budget_usd_spent_total",
+        unit="USD",
+        description="Cumulative USD spent across runs.",
+    )
+
+
+def routing_decisions_total() -> Counter:
+    return _counter(
+        "routing_decisions_total",
+        description="Routing decisions by strategy.",
+    )
+
+
+def reset_counters_for_tests() -> None:
+    """Clear the module-level counter cache.
+
+    Tests that swap the global ``MeterProvider`` via
+    :func:`opentelemetry.metrics.set_meter_provider` must call this so
+    counters are re-created against the new provider.
+    """
+
+    _counters.clear()
+
+
+def set_meter_provider_for_tests(provider: metrics.MeterProvider | None) -> None:
+    """Override the meter provider used by the module-level counters.
+
+    OpenTelemetry's global ``set_meter_provider`` is set-once, so tests
+    use this hook instead to inject an in-memory ``MeterProvider``.
+    """
+
+    global _meter_provider_override
+    _meter_provider_override = provider
+    _counters.clear()

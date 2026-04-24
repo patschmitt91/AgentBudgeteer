@@ -18,6 +18,7 @@ from budgeteer.strategies.base import Strategy
 from budgeteer.strategies.fleet import FleetStrategy
 from budgeteer.strategies.pciv import PCIVStrategy
 from budgeteer.strategies.single_agent import SingleAgentStrategy
+from budgeteer.telemetry import routing_decisions_total
 from budgeteer.types import ExecutionContext, Features, RepoSnapshot, StrategyResult
 
 
@@ -77,6 +78,10 @@ class Router:
                 self._governor.remaining,
                 latency_target_seconds,
             )
+        try:
+            routing_decisions_total().add(1, {"strategy": decision.strategy})
+        except Exception:
+            pass
         return features, decision
 
     def run(
