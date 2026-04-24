@@ -29,10 +29,10 @@ def _features(**overrides: object) -> Features:
 
 def test_pricing_round_trip() -> None:
     table = PricingTable.from_yaml(POLICY_PATH)
-    assert table.has("claude-opus-4-7")
-    cost = table.cost("claude-opus-4-7", tokens_in=1_000_000, tokens_out=0)
+    assert table.has("anthropic-primary")
+    cost = table.cost("anthropic-primary", tokens_in=1_000_000, tokens_out=0)
     assert cost == pytest.approx(15.00)
-    cost2 = table.cost("claude-sonnet-4-6", tokens_in=0, tokens_out=1_000_000)
+    cost2 = table.cost("anthropic-fallback", tokens_in=0, tokens_out=1_000_000)
     assert cost2 == pytest.approx(15.00)
 
 
@@ -65,19 +65,19 @@ def test_projection_triggers_degradation() -> None:
         strategy="pciv",
         features=features,
         role_model_plan={
-            "planner": "claude-opus-4-7",
-            "critic": "claude-opus-4-7",
-            "implementer": "claude-opus-4-7",
-            "verifier": "claude-opus-4-7",
+            "planner": "anthropic-primary",
+            "critic": "anthropic-primary",
+            "implementer": "anthropic-primary",
+            "verifier": "anthropic-primary",
         },
     )
     assert projection.degraded is True
     # protected roles stay on opus
-    assert projection.model_plan["planner"] == "claude-opus-4-7"
-    assert projection.model_plan["critic"] == "claude-opus-4-7"
+    assert projection.model_plan["planner"] == "anthropic-primary"
+    assert projection.model_plan["critic"] == "anthropic-primary"
     # non-protected roles get swapped down
-    assert projection.model_plan["implementer"] == "claude-sonnet-4-6"
-    assert projection.model_plan["verifier"] == "claude-sonnet-4-6"
+    assert projection.model_plan["implementer"] == "anthropic-fallback"
+    assert projection.model_plan["verifier"] == "anthropic-fallback"
 
 
 def test_projection_no_degradation_when_cheap() -> None:
@@ -87,10 +87,10 @@ def test_projection_no_degradation_when_cheap() -> None:
     projection = gov.project(
         strategy="single",
         features=features,
-        role_model_plan={"primary": "claude-opus-4-7"},
+        role_model_plan={"primary": "anthropic-primary"},
     )
     assert projection.degraded is False
-    assert projection.model_plan["primary"] == "claude-opus-4-7"
+    assert projection.model_plan["primary"] == "anthropic-primary"
 
 
 def test_check_can_start_rejects_overrun() -> None:

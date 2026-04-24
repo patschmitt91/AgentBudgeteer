@@ -1,35 +1,45 @@
 # agent-budgeteer
 
+Status: **alpha / research prototype**, v0.1.0.
+
 Runtime orchestration router that picks an execution strategy for an AI
 coding task based on task features, repository characteristics, remaining
 budget, and a latency target. It runs on top of
-[microsoft/agent-framework](https://github.com/microsoft/agent-framework)
-and does not replace it.
+[microsoft/agent-framework][af] and does not replace it.
 
-## Why this exists
+[af]: https://github.com/microsoft/agent-framework
 
-- Princeton NLP evaluated single-agent versus multi-agent systems on coding
-  benchmarks and found that single agents match or beat multi-agent systems
-  on roughly 64% of tasks when given equivalent tools and context. The
-  multi-agent lift is around 2.1 percentage points of accuracy at about 2x
-  the cost. Picking the right pattern matters.
-- GitHub's Rubber Duck experiment paired Claude Sonnet with GPT-5.4 and
-  closed 74.7% of the Sonnet-to-Opus gap on SWE-Bench Pro. Cross-family
-  orchestration helps on the hard tail but is overkill for simple edits.
-- agent-framework ships the orchestration patterns. No existing framework
-  decides at runtime which pattern to use for a given task. That is what
-  agent-budgeteer adds.
+## Motivation
+
+Single-agent, multi-agent plan-and-verify, and parallel worker-pool
+topologies have distinct cost, latency, and accuracy envelopes.
+[agent-framework][af] ships all three as first-class primitives but
+leaves topology selection to the developer at build time. This project
+adds a runtime router so the topology is chosen per task, against a
+hard USD budget and a latency target, with degradation rules when the
+projected cost exceeds the remaining budget.
+
+Evaluation targets include public coding benchmarks such as
+[SWE-bench](https://www.swebench.com/) and the SWE-bench Verified
+split. See [bench/README.md](bench/README.md) for the internal
+benchmark harness used today; real-model results will be published
+under `bench/results/` once the runner has executed against a live
+provider (tracked in [docs/roadmap.md](docs/roadmap.md)).
 
 ## Strategies
 
 | Strategy      | Shape                                      | When v0 picks it                |
 |---------------|--------------------------------------------|---------------------------------|
-| SingleAgent   | One Opus 4.7 call with streaming           | Default, large context, tight budget |
-| PCIV          | Plan, critique, implement, verify graph    | Reasoning-heavy tasks with tests |
+| SingleAgent   | One streaming agent call                   | Default, large context, tight budget |
+| PCIV          | Plan, critique, implement, verify pipeline | Reasoning-heavy tasks with tests |
 | Fleet         | N parallel workers in git worktrees        | High file count, low coupling    |
 
-Routing is a hand-tuned decision tree in `config/policy.yaml` for v0. A
-learned policy is planned.
+All model ids are placeholder deployment names in
+[config/policy.yaml](config/policy.yaml). Set your own via environment
+variables or by editing the config; see
+[docs/configuration.md](docs/configuration.md). Routing is a
+hand-tuned decision tree in the same file for v0; a learned policy
+is planned (see [docs/roadmap.md](docs/roadmap.md)).
 
 ## Quickstart
 
@@ -48,11 +58,15 @@ uv run budgeteer run "..." --force-strategy single --dry-run
 
 ## How it composes with agent-framework
 
-agent-budgeteer does not implement agents or chat clients. It classifies a
-task, selects a strategy, and then delegates execution to agent-framework
-primitives through thin adapters in `src/budgeteer/adapters/`. The PCIV
-strategy wraps an agent-framework graph workflow. The Fleet strategy spawns
-agent-framework agents across git worktrees.
+agent-budgeteer does not implement agents or chat clients. It classifies
+a task, selects a strategy, and delegates execution through thin
+adapters in `src/budgeteer/adapters/`. The `SingleAgent` and `Fleet`
+strategies compose [agent-framework][af] primitives directly. The
+`PCIV` strategy delegates to the sibling [pciv](https://github.com/patschmitt91/PCIV)
+project, which today uses its own async pipeline; migration of that
+spine to agent-framework graph workflow primitives is specified in
+[PCIV/docs/decisions/0001-agent-framework-port.md](https://github.com/patschmitt91/PCIV/blob/master/docs/decisions/0001-agent-framework-port.md)
+and tracked as a v0.2 milestone.
 
 ## What this is not
 

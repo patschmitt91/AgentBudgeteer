@@ -60,11 +60,11 @@ PCIVRunner = Callable[[PCIVRunRequest], PCIVRunReport]
 
 _ROLE_BY_MODEL: dict[str, str] = {
     # Current PCIV plan.yaml (Azure OpenAI only).
-    "gpt-5.4": "planner_or_critic_or_verifier",
-    "gpt-5.3-codex": "implementer",
+    "azure-reasoning": "planner_or_critic_or_verifier",
+    "azure-codegen": "implementer",
     # Retained so legacy fixtures and bench tests still decode role strings.
-    "claude-opus-4-7": "planner_or_verifier",
-    "claude-sonnet-4-6": "implementer",
+    "anthropic-primary": "planner_or_verifier",
+    "anthropic-fallback": "implementer",
 }
 
 # PCIV RunOutcome.status values that indicate a successful merge/ship.

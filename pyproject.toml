@@ -24,7 +24,7 @@ dependencies = [
   "agent-framework-core>=1.1.1,<2",
   "anthropic>=0.40.0,<1",
   "openai>=1.50.0,<3",
-  "pciv",
+  "pciv @ git+https://github.com/patschmitt91/PCIV.git@2a64bfe0ea550925fb15c048588a5666509da2ab",
   "pydantic>=2.9.0,<3",
   "pyyaml>=6.0.2,<7",
   "typer>=0.16,<1",
@@ -47,9 +47,9 @@ learn = [
 ]
 
 [project.urls]
-Homepage = "https://example.com/agent-budgeteer"
-Repository = "https://example.com/agent-budgeteer"
-Issues = "https://example.com/agent-budgeteer/issues"
+Homepage = "https://github.com/patschmitt91/AgentBudgeteer"
+Repository = "https://github.com/patschmitt91/AgentBudgeteer"
+Issues = "https://github.com/patschmitt91/AgentBudgeteer/issues"
 
 [project.scripts]
 budgeteer = "budgeteer.cli:app"
@@ -57,11 +57,20 @@ budgeteer = "budgeteer.cli:app"
 [tool.hatch.build.targets.wheel]
 packages = ["src/budgeteer"]
 
+[tool.hatch.metadata]
+# Required because the `pciv` dependency is pinned to a git ref via a
+# PEP 508 direct reference.
+allow-direct-references = true
+
 [tool.uv]
 prerelease = "allow"
 
+# Local dev against a sibling PCIV checkout:
+#   uncomment the override below when PCIV is checked out at ../PCIV.
+#   `uv sync` on a fresh clone (without PCIV alongside) resolves pciv
+#   from the git pin in [project.dependencies].
 [tool.uv.sources]
-pciv = { path = "../../PCIV", editable = true }
+# pciv = { path = "../PCIV", editable = true }
 
 [tool.ruff]
 line-length = 100

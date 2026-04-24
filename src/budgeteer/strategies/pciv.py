@@ -147,7 +147,7 @@ class PCIVStrategy(Strategy):
         without pciv while ensuring cost projections stay in sync with
         whatever models plan.yaml currently declares.
         """
-        _DEFAULTS = ("gpt-5.4", "gpt-5.4", "gpt-5.3-codex", "gpt-5.4")
+        _DEFAULTS = ("azure-reasoning", "azure-reasoning", "azure-codegen", "azure-reasoning")
         if not self._config_path.is_file():
             return _DEFAULTS
         try:

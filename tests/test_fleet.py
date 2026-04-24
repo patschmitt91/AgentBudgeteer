@@ -146,7 +146,7 @@ def test_fleet_happy_path_runs_all_shards() -> None:
         adapter=adapter,  # type: ignore[arg-type]
         pricing=pricing,
         governor=governor,
-        model="claude-sonnet-4-6",
+        model="anthropic-fallback",
         max_workers=3,
         ledger=ledger,
         worktree_manager=manager,
@@ -175,7 +175,7 @@ def test_fleet_refuses_when_budget_too_small() -> None:
         adapter=adapter,  # type: ignore[arg-type]
         pricing=pricing,
         governor=governor,
-        model="claude-sonnet-4-6",
+        model="anthropic-fallback",
         ledger=ShardLedger(":memory:"),
         worktree_manager=TempDirWorktreeManager(),
     )
@@ -209,7 +209,7 @@ def test_fleet_reports_per_shard_failure() -> None:
         adapter=adapter,  # type: ignore[arg-type]
         pricing=pricing,
         governor=governor,
-        model="claude-sonnet-4-6",
+        model="anthropic-fallback",
         max_workers=2,
         ledger=ShardLedger(":memory:"),
         worktree_manager=TempDirWorktreeManager(),

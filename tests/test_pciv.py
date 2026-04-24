@@ -47,8 +47,8 @@ def _fake_report(total_cost: float = 0.05, blocks: bool = False) -> PCIVRunRepor
         plan_subtask_count=2,
         critique_issues=[],
         cost_lines=[
-            PCIVCostLine("claude-opus-4-7", 1_000, 500, total_cost * 0.7, "planner_or_verifier"),
-            PCIVCostLine("gpt-5.4", 1_200, 300, total_cost * 0.3, "critic"),
+            PCIVCostLine("anthropic-primary", 1_000, 500, total_cost * 0.7, "planner_or_verifier"),
+            PCIVCostLine("azure-reasoning", 1_200, 300, total_cost * 0.3, "critic"),
         ],
         total_cost_usd=total_cost,
         output_text="fake pciv run",

@@ -78,7 +78,7 @@ def test_single_agent_happy_path() -> None:
         adapter=adapter,  # type: ignore[arg-type]
         pricing=pricing,
         governor=governor,
-        model="claude-opus-4-7",
+        model="anthropic-primary",
     )
 
     result = strategy.execute("Do the thing", _context())
@@ -88,7 +88,7 @@ def test_single_agent_happy_path() -> None:
     assert result.output_text == "done"
     assert len(result.model_trace) == 1
     invocation = result.model_trace[0]
-    assert invocation.model == "claude-opus-4-7"
+    assert invocation.model == "anthropic-primary"
     assert invocation.tokens_in == 1_000
     assert invocation.tokens_out == 500
     # 1_000 in @ 15/Mtok + 500 out @ 75/Mtok = 0.015 + 0.0375 = 0.0525
@@ -105,7 +105,7 @@ def test_single_agent_refuses_when_budget_too_small() -> None:
         adapter=adapter,  # type: ignore[arg-type]
         pricing=pricing,
         governor=governor,
-        model="claude-opus-4-7",
+        model="anthropic-primary",
     )
 
     result = strategy.execute("Do the thing", _context())
@@ -126,7 +126,7 @@ def test_single_agent_reports_adapter_error() -> None:
         adapter=_BoomAdapter(),  # type: ignore[arg-type]
         pricing=pricing,
         governor=governor,
-        model="claude-opus-4-7",
+        model="anthropic-primary",
     )
 
     result = strategy.execute("Do the thing", _context())

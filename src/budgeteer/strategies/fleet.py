@@ -35,7 +35,7 @@ class FleetStrategy(Strategy):
         adapter: AnthropicAdapter,
         pricing: PricingTable,
         governor: BudgetGovernor,
-        model: str = "claude-sonnet-4-6",
+        model: str = "anthropic-fallback",
         max_workers: int = 4,
         per_shard_max_tokens: int = 2048,
         ledger: ShardLedger | None = None,
