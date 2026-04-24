@@ -12,6 +12,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.pre-commit-config.yaml` wiring ruff, ruff-format, mypy (via
   `uv run mypy`), and the standard `pre-commit-hooks` whitespace /
   merge-conflict / toml / yaml checks.
+- `docs/configuration.md` — every key in `config/policy.yaml`
+  documented, including env-var overrides.
+- `docs/roadmap.md` — dated v0.1 / v0.2 / v0.3 milestones.
+- `docs/decisions/0001-decision-tree-not-classifier.md`,
+  `0002-sqlite-ledger-for-fleet.md`,
+  `0003-git-worktrees-not-branches-for-fleet.md`.
+
+### Changed
+
+- Rewrote `README.md` to the 13-section skeleton (pitch, badges,
+  status, what it does, why, install, quickstart with expected
+  output, architecture Mermaid sequence, strategies table,
+  configuration pointer, benchmarks, roadmap, license + BibTeX).
 
 ## [0.1.0] — 2026-04-24
 
