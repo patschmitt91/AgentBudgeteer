@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-04-24
+
 ### Added
 
 - Structured logging: `JsonFormatter` in `src/budgeteer/telemetry.py`
@@ -136,5 +138,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README bullets referencing specific empirical claims that could
   not be cited to a public source.
 
-[Unreleased]: https://github.com/patschmitt91/AgentBudgeteer/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/patschmitt91/AgentBudgeteer/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/patschmitt91/AgentBudgeteer/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/patschmitt91/AgentBudgeteer/releases/tag/v0.1.0

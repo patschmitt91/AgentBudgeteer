@@ -1,18 +1,25 @@
 ## Summary
 
-<!-- What changed and why. One paragraph. -->
+<!-- One paragraph: what changed and why. -->
 
-## Testing
+## Risk
 
-<!-- Commands run, and what they showed. -->
+<!-- Blast radius, rollback plan, affected components. -->
+
+## Test evidence
+
+<!-- Commands run and their output. -->
 
 - [ ] `uv run ruff check`
 - [ ] `uv run ruff format --check`
 - [ ] `uv run mypy`
 - [ ] `uv run pytest -q`
 
-## Checklist
+## Changelog updated?
 
-- [ ] Tests updated or added
-- [ ] Docs updated (README, CHANGELOG, or `docs/`)
-- [ ] No new secrets, tokens, or endpoints committed
+<!-- Yes/No. If yes, point to the entry under [Unreleased]. -->
+
+## Backwards compatibility
+
+<!-- Any breaking changes? Public APIs, CLI flags, config keys, on-disk
+     schemas. If breaking, call out the migration path. -->

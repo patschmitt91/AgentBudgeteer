@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agent-budgeteer"
-version = "0.1.0"
+version = "0.2.0"
 description = "Runtime orchestration router that selects single-agent, PCIV, or Fleet strategies on top of microsoft/agent-framework based on task features and budget."
 readme = "README.md"
 requires-python = ">=3.11"

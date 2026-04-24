@@ -46,9 +46,15 @@ live-provider path today; set `ANTHROPIC_API_KEY` before `budgeteer run`.
 
 ## Quickstart
 
+Install dependencies, run the environment check, exercise a dry-run, then
+build and run the container.
+
 ```
-$ uv run budgeteer run "Rename User to Account across src/" \
-    --budget 2.50 --max-latency 600 --dry-run
+$ uv sync
+$ uv run budgeteer doctor
+$ uv run budgeteer run "Rename User to Account across src/" --budget 2.50 --max-latency 600 --dry-run
+$ docker build -t agent-budgeteer:0.2.0 .
+$ docker run --rm agent-budgeteer:0.2.0 doctor
 ```
 
 Expected output shape (dry-run, no network):
