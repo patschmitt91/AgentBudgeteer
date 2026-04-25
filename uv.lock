@@ -84,7 +84,7 @@ requires-dist = [
     { name = "openai", specifier = ">=1.50.0,<3" },
     { name = "opentelemetry-api", specifier = ">=1.39.0,<2" },
     { name = "opentelemetry-sdk", specifier = ">=1.39.0,<2" },
-    { name = "pciv", git = "https://github.com/patschmitt91/PCIV.git?rev=5c04e8e88d4294a2549a05e49031137a1160e77e" },
+    { name = "pciv", git = "https://github.com/patschmitt91/PCIV.git?rev=133864e1243f8af464a2072e38bbb6ec57bacd5d" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = "==3.8.0" },
     { name = "pydantic", specifier = ">=2.9.0,<3" },
     { name = "pytest", marker = "extra == 'dev'", specifier = "==8.3.3" },
@@ -2925,10 +2925,11 @@ wheels = [
 
 [[package]]
 name = "pciv"
-version = "0.1.0"
-source = { git = "https://github.com/patschmitt91/PCIV.git?rev=5c04e8e88d4294a2549a05e49031137a1160e77e#5c04e8e88d4294a2549a05e49031137a1160e77e" }
+version = "0.2.0"
+source = { git = "https://github.com/patschmitt91/PCIV.git?rev=133864e1243f8af464a2072e38bbb6ec57bacd5d#133864e1243f8af464a2072e38bbb6ec57bacd5d" }
 dependencies = [
     { name = "agent-framework" },
+    { name = "agentcore" },
     { name = "azure-monitor-opentelemetry" },
     { name = "openai" },
     { name = "opentelemetry-sdk" },
