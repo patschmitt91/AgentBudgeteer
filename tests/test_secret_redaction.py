@@ -133,6 +133,6 @@ def test_secret_redaction_end_to_end(tmp_path: Path, monkeypatch: pytest.MonkeyP
     spans = exporter.get_finished_spans()
     for span in spans:
         for value in SECRETS.values():
-            assert not _span_contains(
-                span, value
-            ), f"secret leaked into span {span.name}: {value!r}"
+            assert not _span_contains(span, value), (
+                f"secret leaked into span {span.name}: {value!r}"
+            )
