@@ -5,7 +5,7 @@
 # are still a supply-chain risk despite the minor pin.
 
 # ---- builder ----
-FROM python:3.12-slim AS builder
+FROM python:3.14-slim AS builder
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -34,7 +34,7 @@ COPY config ./config
 RUN uv sync --no-dev --frozen
 
 # ---- runtime ----
-FROM python:3.12-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 ARG VERSION=dev
 
