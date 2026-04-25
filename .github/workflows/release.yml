@@ -51,7 +51,7 @@ jobs:
           uv run sigstore sign dist/*.whl dist/*.tar.gz
 
       - name: Upload dist artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dist
           path: |
@@ -136,7 +136,7 @@ jobs:
 
       - name: Upload trivy report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: trivy-image-report
           path: trivy-image-report.json
