@@ -16,8 +16,11 @@ import typer
 from budgeteer.router import Router
 from budgeteer.telemetry import (
     configure_logging,
+    cost_usd_per_run,
+    latency_seconds_per_run,
     runs_failed_total,
     runs_total,
+    tokens_per_run,
 )
 from budgeteer.types import RepoSnapshot
 
@@ -350,6 +353,18 @@ def run(
         "result": outcome.result.model_dump(mode="json"),
     }
     typer.echo(json.dumps(payload, indent=2, default=str))
+    # Per-run histograms recorded once per terminal status. Telemetry must
+    # never break accounting, so wrap in suppress() — a broken exporter
+    # cannot mask the run outcome.
+    import contextlib as _contextlib
+
+    with _contextlib.suppress(Exception):
+        latency_seconds_per_run().record(float(outcome.result.latency_seconds))
+        cost_usd_per_run().record(float(outcome.result.cost_usd))
+        total_tokens = sum(
+            inv.tokens_in + inv.tokens_out for inv in outcome.result.model_trace
+        )
+        tokens_per_run().record(int(total_tokens))
     if not outcome.result.success:
         runs_failed_total().add(1)
         sys.exit(1)
