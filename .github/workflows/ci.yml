@@ -173,5 +173,31 @@ jobs:
       - name: Build image
         run: docker build -t agent-budgeteer:ci .
 
-      - name: Run doctor in container
-        run: docker run --rm agent-budgeteer:ci doctor
+      - name: Smoke (version, no env required)
+        run: docker run --rm agent-budgeteer:ci version
+
+  pip-audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    # Advisory in phase-0; tighten to required after triage of initial findings.
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync
+        run: uv sync --extra dev --extra learn
+
+      - name: Install pip-audit
+        run: uv pip install pip-audit
+
+      - name: Audit installed environment
+        run: uv run pip-audit --strict --progress-spinner=off

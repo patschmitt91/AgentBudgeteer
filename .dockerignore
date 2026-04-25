@@ -6,6 +6,7 @@ build
 tests
 docs
 bench
+bench/results.json
 *.egg-info
 .mypy_cache
 .ruff_cache
@@ -14,6 +15,7 @@ bench
 .coverage.*
 coverage.xml
 __pycache__
+**/__pycache__
 *.pyc
 *.pyo
 .editorconfig
