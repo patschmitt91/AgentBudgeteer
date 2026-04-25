@@ -76,7 +76,21 @@ class SingleAgentStrategy(Strategy):
                 return self._failure(started=started, error=f"adapter_error: {exc}")
 
             cost = self._pricing.cost(effective_model, response.tokens_in, response.tokens_out)
-            self._governor.record_spend(cost)
+            try:
+                self._governor.record_spend(cost)
+            except BudgetExceeded as exc:
+                # ``record_spend`` raises *after* applying the spend when the
+                # cap is breached mid-call. The contract for ``execute`` is
+                # to always return a ``StrategyResult``; convert the exception
+                # into a structured failure so callers (Router, fleet) do not
+                # have to wrap every strategy call in their own try/except.
+                span.set_attribute("error", True)
+                span.set_attribute("error.message", str(exc))
+                return self._failure(
+                    started=started,
+                    error=f"post_call_budget_exceeded: {exc}",
+                    cost_usd=cost,
+                )
 
             span.set_attribute("tokens_in", response.tokens_in)
             span.set_attribute("tokens_out", response.tokens_out)

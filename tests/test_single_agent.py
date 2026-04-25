@@ -134,3 +134,26 @@ def test_single_agent_reports_adapter_error() -> None:
     assert result.success is False
     assert result.error is not None
     assert "network down" in result.error
+
+
+def test_post_call_budget_exceeded_returns_failed_result_not_exception() -> None:
+    """Regression: `record_spend` raising mid-execute must not bubble out."""
+    pricing = PricingTable.from_yaml(POLICY_PATH)
+    # Cap is large enough to clear preflight (which projects 100 in / 200 out)
+    # but smaller than the actual post-call spend (1000 in / 5000 out).
+    governor = BudgetGovernor(pricing, load_degradation(POLICY_PATH), hard_cap_usd=0.05)
+    adapter = _FakeAdapter(text="big", tokens_in=1_000, tokens_out=5_000)
+    strategy = SingleAgentStrategy(
+        adapter=adapter,  # type: ignore[arg-type]
+        pricing=pricing,
+        governor=governor,
+        model="anthropic-primary",
+    )
+
+    result = strategy.execute("Do the thing", _context())
+
+    assert result.success is False
+    assert result.error is not None
+    assert "post_call_budget_exceeded" in result.error
+    # Spend was still recorded (the governor raised AFTER applying it).
+    assert governor.spent > 0

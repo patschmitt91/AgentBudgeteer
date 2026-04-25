@@ -3,10 +3,17 @@ name: release
 on:
   push:
     tags:
-      - "v*"
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 permissions:
   contents: write
+  packages: write
+  id-token: write  # required for sigstore keyless signing
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -33,11 +40,23 @@ jobs:
       - name: twine check
         run: uv run twine check dist/*
 
+      - name: Generate CycloneDX SBOM
+        run: |
+          uv pip install cyclonedx-bom
+          uv run cyclonedx-py environment -o sbom.json
+
+      - name: Sign artifacts with sigstore
+        run: |
+          uv pip install sigstore
+          uv run sigstore sign dist/*.whl dist/*.tar.gz
+
       - name: Upload dist artifact
         uses: actions/upload-artifact@v4
         with:
           name: dist
-          path: dist/
+          path: |
+            dist/
+            sbom.json
           if-no-files-found: error
 
   release:
@@ -47,6 +66,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
 
       - name: Download dist artifact
         uses: actions/download-artifact@v4
@@ -63,3 +87,57 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
+
+  docker:
+    name: publish container image to ghcr.io
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve image tag
+        id: tag
+        run: |
+          ref="${GITHUB_REF_NAME}"
+          echo "tag=${ref#v}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.tag.outputs.image }}:${{ steps.tag.outputs.tag }}
+            ${{ steps.tag.outputs.image }}:latest
+
+      - name: Trivy image scan (fail on HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: ${{ steps.tag.outputs.image }}:${{ steps.tag.outputs.tag }}
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          format: json
+          output: trivy-image-report.json
+
+      - name: Upload trivy report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-image-report
+          path: trivy-image-report.json
+          if-no-files-found: ignore

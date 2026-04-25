@@ -11,6 +11,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 import tempfile
+import threading
 from pathlib import Path
 from typing import Protocol
 
@@ -35,7 +36,12 @@ class GitWorktreeManager:
         self._repo_root = repo_root
         self._base_branch = base_branch
         self._is_git = _detect_git_repo(repo_root)
+        # Provisioned-path bookkeeping is touched by every worker thread.
+        # Guard reads/writes with a lock so a failed provision cannot leave
+        # a stale entry visible to a concurrent cleanup. See harden/phase-2
+        # audit item #7.
         self._provisioned: dict[Path, bool] = {}
+        self._lock = threading.Lock()
 
     @property
     def is_git(self) -> bool:
@@ -57,17 +63,21 @@ class GitWorktreeManager:
                 if self._base_branch:
                     cmd.append(self._base_branch)
                 subprocess.run(cmd, check=True, capture_output=True, text=True)
-                self._provisioned[workdir] = True
+                with self._lock:
+                    self._provisioned[workdir] = True
                 return workdir
             except (subprocess.CalledProcessError, FileNotFoundError):
                 # Fall through to tempdir-only mode.
-                self._provisioned[workdir] = False
+                with self._lock:
+                    self._provisioned[workdir] = False
                 return workdir
-        self._provisioned[workdir] = False
+        with self._lock:
+            self._provisioned[workdir] = False
         return workdir
 
     def cleanup(self, path: Path) -> None:
-        used_git = self._provisioned.pop(path, False)
+        with self._lock:
+            used_git = self._provisioned.pop(path, False)
         if used_git:
             try:
                 subprocess.run(

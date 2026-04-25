@@ -173,5 +173,86 @@ jobs:
       - name: Build image
         run: docker build -t agent-budgeteer:ci .
 
-      - name: Run doctor in container
-        run: docker run --rm agent-budgeteer:ci doctor
+      - name: Smoke (version, no env required)
+        run: docker run --rm agent-budgeteer:ci version
+
+  pip-audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    # Advisory in phase-0; tighten to required after triage of initial findings.
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync
+        run: uv sync --extra dev --extra learn
+
+      - name: Install pip-audit
+        run: uv pip install pip-audit
+
+      - name: Audit installed environment
+        run: uv run pip-audit --progress-spinner=off --skip-editable
+
+  trivy-fs:
+    name: trivy fs scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Trivy fs scan (fail on HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          format: json
+          output: trivy-fs-report.json
+
+      - name: Upload trivy report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-fs-report
+          path: trivy-fs-report.json
+          if-no-files-found: ignore
+
+  sbom:
+    name: cyclonedx sbom
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync
+        run: uv sync --extra dev
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          uv pip install cyclonedx-bom
+          uv run cyclonedx-py environment -o sbom.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.json
+          if-no-files-found: error

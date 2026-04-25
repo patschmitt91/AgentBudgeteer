@@ -142,3 +142,19 @@ def test_short_latency_default_single(policy: Policy) -> None:
     f = _features(reasoning_vs_mechanical_score=0.1, test_presence=False)
     d = policy.route(f, budget_remaining=2.0, latency_target_seconds=60)
     assert d.strategy == "single"
+
+
+def test_tight_budget_overrides_large_context(policy: Policy) -> None:
+    """Regression: tight-budget guard runs before the large-context branch.
+
+    Pre-Phase-2 the large-context check was evaluated first and silently
+    routed a $0.05 task to the (expensive) primary model.
+    """
+    f = _features(
+        estimated_input_tokens=10_000_000,  # well past large_context threshold
+        reasoning_vs_mechanical_score=0.5,
+    )
+    d = policy.route(f, budget_remaining=0.05, latency_target_seconds=600)
+    assert d.strategy == "single"
+    assert d.reason == "tight_budget"
+    assert d.model == policy.defaults.single_agent_fallback

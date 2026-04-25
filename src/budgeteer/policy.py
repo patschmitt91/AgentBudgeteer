@@ -110,18 +110,22 @@ class Policy:
         t = self._t
         m = self._m
 
-        if features.estimated_input_tokens > t.large_context_token_threshold:
-            return RouteDecision(
-                strategy="single",
-                model=m.single_agent_primary,
-                reason="input_tokens_exceed_large_context_threshold",
-            )
-
+        # Tight-budget guard runs FIRST so a $0.05 task can never select an
+        # Opus-class primary, even on a large-context input. Previously the
+        # large-context branch was evaluated first and silently overrode the
+        # budget cap. See harden/phase-2 audit item #2.
         if budget_remaining < t.tight_budget_usd:
             return RouteDecision(
                 strategy="single",
                 model=m.single_agent_fallback,
                 reason="tight_budget",
+            )
+
+        if features.estimated_input_tokens > t.large_context_token_threshold:
+            return RouteDecision(
+                strategy="single",
+                model=m.single_agent_primary,
+                reason="input_tokens_exceed_large_context_threshold",
             )
 
         if latency_target_seconds < t.short_latency_seconds:

@@ -226,3 +226,40 @@ def _only_run_id(ledger: ShardLedger) -> str:
     row = cur.fetchone()
     assert row is not None
     return str(row[0])
+
+
+def test_fleet_aborts_remaining_shards_when_cap_breached() -> None:
+    """Regression: per-shard preflight stops new claims once budget is gone.
+
+    Pre-Phase-2 the fleet only checked the projected-total cap once before
+    spawning workers and tallied real cost after every worker returned.
+    With `record_spend` raising late in the run, shards continued to
+    burn API tokens past the cap.
+    """
+    pricing = PricingTable.from_yaml(POLICY_PATH)
+    # Cap covers ~2 large shards. Per-shard projected (fleet, 12 files) is
+    # roughly projection_total / num_shards; once 2 shards record real spend
+    # the 3rd worker's preflight must raise BudgetExceeded.
+    governor = BudgetGovernor(pricing, load_degradation(POLICY_PATH), hard_cap_usd=0.30)
+    big_output_adapter = _FakeAdapter(text="x", tokens_in=200, tokens_out=10_000)
+    strategy = FleetStrategy(
+        adapter=big_output_adapter,  # type: ignore[arg-type]
+        pricing=pricing,
+        governor=governor,
+        model="anthropic-fallback",
+        max_workers=1,  # serialize to make the budget arithmetic deterministic
+        ledger=ShardLedger(":memory:"),
+        worktree_manager=TempDirWorktreeManager(),
+    )
+    # 4 yaml files -> 4 shards.
+    strategy.execute("Convert a.yaml, b.yaml, c.yaml, d.yaml", _context())
+    # The strategy may report success=True if at least one shard completed,
+    # but it must NOT have run all 4 shards: per-shard preflight aborted.
+    assert big_output_adapter.calls < 4, (
+        f"expected per-shard preflight to abort claiming new shards once the "
+        f"budget was spent, but adapter was called {big_output_adapter.calls} times"
+    )
+    # Spend may slightly exceed the cap because the final shard's real cost
+    # is only known after it returns; what matters for the regression is
+    # that ``calls < 4`` -- the next worker iteration aborted instead of
+    # claiming and burning another shard.

@@ -206,3 +206,41 @@ def test_router_wires_pciv_when_decision_is_pciv(pciv_config_file: Path) -> None
     assert outcome.decision.strategy == "pciv"
     assert outcome.result.success is True
     assert len(runs) == 1
+
+
+def test_pciv_gate_rejects_by_default(pciv_config_file: Path) -> None:
+    """Regression: HITL gates default to `reject`; opt-in required.
+
+    Pre-Phase-2 the budgeteer-side adapter hard-coded `approve` for every
+    PCIV gate, so an unattended router run could merge model output without
+    operator review. The flag must be threaded all the way to PCIVRunRequest.
+    """
+    pricing = PricingTable.from_yaml(POLICY_PATH)
+    governor = BudgetGovernor(pricing, load_degradation(POLICY_PATH), hard_cap_usd=5.0)
+
+    seen: list[PCIVRunRequest] = []
+
+    def fake_runner(req: PCIVRunRequest) -> PCIVRunReport:
+        seen.append(req)
+        return _fake_report(total_cost=0.01, blocks=False)
+
+    # Default construction: auto_approve_gates omitted -> False.
+    default_strategy = PCIVStrategy(
+        pciv_config_path=pciv_config_file,
+        pricing=pricing,
+        governor=governor,
+        runner=fake_runner,
+    )
+    default_strategy.execute("Add retry logic", _context())
+    assert seen[-1].auto_approve_gates is False
+
+    # Opt-in: caller passes auto_approve_gates=True.
+    opted_in = PCIVStrategy(
+        pciv_config_path=pciv_config_file,
+        pricing=pricing,
+        governor=governor,
+        runner=fake_runner,
+        auto_approve_gates=True,
+    )
+    opted_in.execute("Add retry logic", _context())
+    assert seen[-1].auto_approve_gates is True

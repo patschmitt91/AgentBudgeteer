@@ -16,8 +16,11 @@ import typer
 from budgeteer.router import Router
 from budgeteer.telemetry import (
     configure_logging,
+    cost_usd_per_run,
+    latency_seconds_per_run,
     runs_failed_total,
     runs_total,
+    tokens_per_run,
 )
 from budgeteer.types import RepoSnapshot
 
@@ -41,6 +44,15 @@ _PCIV_CONFIG_OPT = typer.Option(
     None,
     "--pciv-config",
     help="Path to pciv plan.yaml (overrides the value in policy.yaml).",
+)
+_AUTO_APPROVE_PCIV_OPT = typer.Option(
+    False,
+    "--auto-approve-pciv-gates",
+    help=(
+        "Auto-approve every PCIV HITL gate. Required for unattended runs that "
+        "select the pciv strategy. Defaults to False; gates are rejected unless "
+        "this flag is supplied. See harden/phase-2 audit item #6."
+    ),
 )
 
 
@@ -281,6 +293,7 @@ def run(
     repo: Path | None = _REPO_OPT,
     policy: Path | None = _POLICY_OPT,
     pciv_config: Path | None = _PCIV_CONFIG_OPT,
+    auto_approve_pciv_gates: bool = _AUTO_APPROVE_PCIV_OPT,
 ) -> None:
     """Run a task through the router."""
 
@@ -301,6 +314,7 @@ def run(
         policy_path=policy_path,
         budget_cap_usd=budget,
         pciv_config_path=pciv_config,
+        auto_approve_pciv_gates=auto_approve_pciv_gates,
     )
 
     if dry_run:
@@ -339,6 +353,16 @@ def run(
         "result": outcome.result.model_dump(mode="json"),
     }
     typer.echo(json.dumps(payload, indent=2, default=str))
+    # Per-run histograms recorded once per terminal status. Telemetry must
+    # never break accounting, so wrap in suppress() — a broken exporter
+    # cannot mask the run outcome.
+    import contextlib as _contextlib
+
+    with _contextlib.suppress(Exception):
+        latency_seconds_per_run().record(float(outcome.result.latency_seconds))
+        cost_usd_per_run().record(float(outcome.result.cost_usd))
+        total_tokens = sum(inv.tokens_in + inv.tokens_out for inv in outcome.result.model_trace)
+        tokens_per_run().record(int(total_tokens))
     if not outcome.result.success:
         runs_failed_total().add(1)
         sys.exit(1)

@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Hardening (per HARDENING_PROMPT.md)
+
+- **Phase 0** — infra refresh (uv pin, healthcheck fix, dependabot, codeql, lychee).
+- **Phase 2** — policy `route()` ordering fix (tight-budget before large-context), `BudgetExceeded` no longer escapes `single_agent.execute`, fleet projection coefficient fix, per-shard preflight via `threading.Event`, `GitWorktreeManager` lock, PCIV adapter HITL gates reject by default (`--auto-approve-pciv-gates` opt-in), `_resolve_models` warns on drift instead of silent fallback.
+- **Phase 3** — fleet `ShardLedger` schema v2 with `ON DELETE CASCADE` on `shards.run_id`, WAL + PRAGMA hardening, `complete_shard` and `fail_shard` redact `result_text` and `error` at the boundary, env-secret cache.
+- **Phase 4** — `budgeteer.redaction` is now a re-export of the new shared `agentcore.redaction`. Adds `agentcore>=0.1.0,<0.2`. ADR 0004.
+- **Phase 5** — release pipeline gains CycloneDX SBOM, sigstore signing, trivy image scan; CI gains trivy fs + SBOM jobs; release `concurrency` guard added.
+
+## [0.2.0] — 2026-04-24
+
 ### Added
 
 - Structured logging: `JsonFormatter` in `src/budgeteer/telemetry.py`
@@ -136,5 +146,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README bullets referencing specific empirical claims that could
   not be cited to a public source.
 
-[Unreleased]: https://github.com/patschmitt91/AgentBudgeteer/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/patschmitt91/AgentBudgeteer/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/patschmitt91/AgentBudgeteer/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/patschmitt91/AgentBudgeteer/releases/tag/v0.1.0
