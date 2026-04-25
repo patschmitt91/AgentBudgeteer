@@ -201,3 +201,58 @@ jobs:
 
       - name: Audit installed environment
         run: uv run pip-audit --strict --progress-spinner=off
+
+  trivy-fs:
+    name: trivy fs scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Trivy fs scan (fail on HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          format: json
+          output: trivy-fs-report.json
+
+      - name: Upload trivy report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-fs-report
+          path: trivy-fs-report.json
+          if-no-files-found: ignore
+
+  sbom:
+    name: cyclonedx sbom
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync
+        run: uv sync --extra dev
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          uv pip install cyclonedx-bom
+          uv run cyclonedx-py environment -o sbom.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.json
+          if-no-files-found: error
