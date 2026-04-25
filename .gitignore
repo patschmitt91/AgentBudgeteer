@@ -16,3 +16,5 @@ bench/results.json
 # policy.yaml. The data is per-deployment state, not source.
 .budgeteer/
 *.db
+# Live-bench per-task cap ledgers (per AB-6). Recreated on every run.
+bench/live/.ledger/

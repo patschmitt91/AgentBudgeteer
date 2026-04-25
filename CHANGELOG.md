@@ -33,6 +33,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   spend via `force_record(reason="--ignore-cross-run-cap")`, which
   writes a `forced=1` row to `budget_window` for audit. Per-run
   `--budget` still applies.
+- Live-provider micro-bench scaffolding under [`bench/live/`](bench/live/README.md)
+  (AB-6, scaffolding only — no cassette recorded yet).
+  - Hand-rolled JSON cassette format keyed at the `AnthropicAdapter`
+    Protocol layer (`bench/live/cassette.py`). Justified over vcrpy
+    in the bench README: no new dependency, stable across SDK
+    upgrades, `git diff`-friendly.
+  - `bench/live/runner.py` — replay (default; CI) and live (gated by
+    `BENCH_LIVE=1`) modes. Live mode opens a per-task
+    `PersistentBudgetLedger` with the task YAML's `cost_cap_usd` and
+    refuses to persist the cassette if the cap is breached.
+  - First task fixture: `bench/live/tasks/task_01_reverse_string.yaml`
+    targeting `anthropic-fallback` with a $0.05 hard cap.
+  - `tests/test_live_bench_replay.py` — CI-active replay test that
+    auto-discovers tasks and skips per-task when its cassette is
+    missing. Currently 1 skipped, 0 passed (no cassette recorded).
 - `tests/test_cross_run_budget.py` (3 tests):
   - Two sequential `budgeteer run` invocations with a fake adapter:
     the second is rejected at preflight with exit code 2 once the

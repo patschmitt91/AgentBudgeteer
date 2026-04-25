@@ -1,0 +1,6 @@
+# Cassette directory placeholder. Real cassettes are written here by
+# `bench/live/runner.py` when invoked with BENCH_LIVE=1. Replay mode
+# (default + CI) reads them.
+#
+# This file exists so the directory is tracked in git before the first
+# cassette is recorded.

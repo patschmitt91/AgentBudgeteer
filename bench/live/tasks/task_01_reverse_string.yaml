@@ -1,0 +1,45 @@
+# AB-6 micro-bench task 01.
+#
+# Single short prompt, single adapter call, easy to reason about.
+# Targets the cheapest pricing tier in policy.yaml so the recorded
+# cassette is cap-safe even on a tail-latency / large-completion call.
+
+id: task_01_reverse_string
+description: >
+  One short, deterministic-shape coding question routed through the
+  SingleAgent strategy. Used to prove the live-bench cassette + replay
+  loop end-to-end with a single real provider call.
+
+# Free-form prompt sent to the model.
+task_prompt: >
+  Write a Python function `reverse_string(s: str) -> str` that returns
+  its input reversed. Include one doctest covering the empty string.
+  Return only the function source.
+
+# Provider + model. Keep this in sync with policy.yaml's pricing table;
+# the runner's pricing lookup uses the model id verbatim.
+#
+# `anthropic-fallback` is the cheaper tier in the default policy
+# ($3 / $15 per MTok). At ~50 input + ~250 output tokens we expect
+# ~$0.0039 actual spend, comfortably under the $0.05 hard cap.
+provider: anthropic
+model: anthropic-fallback
+
+# What strategy the policy decision tree should pick for this task.
+# Asserted by the runner; the strategy is also forced so the cassette
+# replays the same path even if classifier defaults shift slightly.
+expected_strategy: single
+
+# Hard ceiling on per-task spend. Enforced by PersistentBudgetLedger
+# (window=daily) BEFORE recording each cassette entry. A breach raises
+# BudgetExceeded and the partial cassette is discarded.
+cost_cap_usd: 0.05
+
+# Per-run --budget passed to the Router. Larger than cost_cap_usd so the
+# per-run governor never trips first; the cap above is the operative
+# bound during recording.
+per_run_budget_usd: 0.20
+
+# Latency target handed to the policy router. Short enough that the
+# policy stays in the SingleAgent branch.
+max_latency_seconds: 60
