@@ -12,7 +12,10 @@ import sys
 from pathlib import Path
 
 import typer
+from agentcore.budget import BudgetExceeded as _CoreBudgetExceeded
+from agentcore.budget import PersistentBudgetLedger
 
+from budgeteer.budget import load_cross_run
 from budgeteer.router import Router
 from budgeteer.telemetry import (
     configure_logging,
@@ -52,6 +55,16 @@ _AUTO_APPROVE_PCIV_OPT = typer.Option(
         "Auto-approve every PCIV HITL gate. Required for unattended runs that "
         "select the pciv strategy. Defaults to False; gates are rejected unless "
         "this flag is supplied. See harden/phase-2 audit item #6."
+    ),
+)
+_IGNORE_CROSS_RUN_OPT = typer.Option(
+    False,
+    "--ignore-cross-run-cap",
+    help=(
+        "Bypass the cross-run rolling-window cap from `[cross_run].cap_usd`. "
+        "Logs WARNING and records the spend with `forced=1` in the persistent "
+        "ledger for audit. Per-run `--budget` still applies. Use only for "
+        "documented emergencies. ADR 0005."
     ),
 )
 
@@ -294,6 +307,7 @@ def run(
     policy: Path | None = _POLICY_OPT,
     pciv_config: Path | None = _PCIV_CONFIG_OPT,
     auto_approve_pciv_gates: bool = _AUTO_APPROVE_PCIV_OPT,
+    ignore_cross_run_cap: bool = _IGNORE_CROSS_RUN_OPT,
 ) -> None:
     """Run a task through the router."""
 
@@ -310,14 +324,57 @@ def run(
 
     repo_root = repo if repo is not None else Path.cwd()
     snapshot = _scan_repo(repo_root)
+
+    # Cross-run rolling-window cap (ADR 0005). Mirrors the PCIV pattern
+    # (PCIV ADR 0007). When `[cross_run].cap_usd` is set in policy.yaml we
+    # open a SQLite-backed PersistentBudgetLedger and (a) refuse to run
+    # when the window is exhausted, (b) cap the per-run governor's
+    # remaining headroom to the cross-run remaining so the router's
+    # tight-budget guard sees the smaller of the two limits, and (c)
+    # record the actual spend after the run completes.
+    cross_run_cfg = load_cross_run(policy_path)
+    cross_run_ledger: PersistentBudgetLedger | None = None
+    effective_budget = budget
+    if cross_run_cfg.cap_usd is not None:
+        assert cross_run_cfg.db_path is not None  # invariant from load_cross_run
+        cross_run_ledger = PersistentBudgetLedger(
+            cross_run_cfg.db_path,
+            cap_usd=cross_run_cfg.cap_usd,
+            window=cross_run_cfg.window,
+        )
+        remaining = cross_run_ledger.remaining_in_current_window()
+        spent = cross_run_ledger.spent_in_current_window()
+        if remaining <= 0:
+            msg = (
+                f"cross-run {cross_run_cfg.window} cap exhausted: spent "
+                f"${spent:.4f} / cap ${cross_run_cfg.cap_usd:.4f} "
+                f"(window={cross_run_ledger.window_key})"
+            )
+            if not ignore_cross_run_cap:
+                cross_run_ledger.close()
+                typer.echo(f"budget: {msg}", err=True)
+                runs_failed_total().add(1)
+                raise typer.Exit(code=2)
+            logging.getLogger(__name__).warning(
+                "ignoring cross-run cap (--ignore-cross-run-cap): %s", msg
+            )
+        elif not ignore_cross_run_cap:
+            # Cap the per-run hard limit to the cross-run remaining so the
+            # router's tight-budget guard and the BudgetGovernor both see
+            # the smaller window-aware figure. The router does not need a
+            # new code path: ``budget_remaining`` already drives routing.
+            effective_budget = min(budget, remaining)
+
     router = Router(
         policy_path=policy_path,
-        budget_cap_usd=budget,
+        budget_cap_usd=effective_budget,
         pciv_config_path=pciv_config,
         auto_approve_pciv_gates=auto_approve_pciv_gates,
     )
 
     if dry_run:
+        if cross_run_ledger is not None:
+            cross_run_ledger.close()
         features, decision = router.route_only(
             task=task,
             repo_snapshot=snapshot,
@@ -336,12 +393,52 @@ def run(
         typer.echo(json.dumps(payload, indent=2, default=str))
         return
 
-    outcome = router.run(
-        task=task,
-        repo_snapshot=snapshot,
-        latency_target_seconds=max_latency,
-        forced=force_strategy,
-    )
+    if cross_run_ledger is not None:
+        cross_run_banner = {
+            "window": cross_run_ledger.window_key,
+            "spent_usd": cross_run_ledger.spent_in_current_window(),
+            "cap_usd": cross_run_cfg.cap_usd,
+            "effective_budget_usd": effective_budget,
+        }
+    else:
+        cross_run_banner = None
+
+    outcome = None
+    try:
+        outcome = router.run(
+            task=task,
+            repo_snapshot=snapshot,
+            latency_target_seconds=max_latency,
+            forced=force_strategy,
+        )
+    finally:
+        # Persist actual spend to the cross-run ledger. Always run on
+        # success or crash so a partial run still counts against the
+        # window cap. ``record_spend`` may raise if the actual spend
+        # overshot what fit in the window; we suppress at the CLI
+        # boundary so the run's own exit status is preserved (the next
+        # run's preflight will catch the breach). The emergency-override
+        # path uses ``force_record`` so the row is marked ``forced=1``
+        # for audit.
+        if cross_run_ledger is not None:
+            actual_spend = (
+                float(outcome.result.cost_usd) if outcome is not None else 0.0
+            )
+            try:
+                if ignore_cross_run_cap:
+                    cross_run_ledger.force_record(
+                        actual_spend,
+                        reason="--ignore-cross-run-cap",
+                    )
+                else:
+                    try:
+                        cross_run_ledger.record_spend(
+                            actual_spend, note=task[:64]
+                        )
+                    except _CoreBudgetExceeded:
+                        pass
+            finally:
+                cross_run_ledger.close()
     payload = {
         "dry_run": False,
         "features": outcome.features.model_dump(),
@@ -352,6 +449,8 @@ def run(
         },
         "result": outcome.result.model_dump(mode="json"),
     }
+    if cross_run_banner is not None:
+        payload["cross_run"] = cross_run_banner
     typer.echo(json.dumps(payload, indent=2, default=str))
     # Per-run histograms recorded once per terminal status. Telemetry must
     # never break accounting, so wrap in suppress() — a broken exporter

@@ -11,3 +11,8 @@ build/
 bench/results.json
 .coverage
 *.sqlite
+# Cross-run budget ledger (per ADR 0005). Generated under
+# config/.budgeteer/ when [cross_run].cap_usd is set in the active
+# policy.yaml. The data is per-deployment state, not source.
+.budgeteer/
+*.db

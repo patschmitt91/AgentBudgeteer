@@ -103,6 +103,27 @@ Triggered when `projected_cost > trigger_ratio * budget_remaining`.
 `protect_roles` (e.g. `["planner", "critic"]`) are never degraded; only
 implementers / workers are swapped.
 
+## `cross_run`
+
+Optional. Enables a SQLite-backed rolling-window USD cap that survives
+across `budgeteer run` invocations (ADR 0005). Omit the block (or set
+`cap_usd: null`) to disable cross-run enforcement; the per-run
+`--budget` still applies.
+
+| Key        | Purpose                                                     |
+|------------|-------------------------------------------------------------|
+| `cap_usd`  | Hard cap in USD per rolling window. Required if block present. |
+| `window`   | `monthly` (UTC `YYYY-MM`) or `daily` (UTC `YYYY-MM-DD`). Default `monthly`. |
+| `db_path`  | SQLite file path. Relative paths resolve against this policy file. Default `.budgeteer/cross_run.db`. |
+
+When active, every `budgeteer run` (a) fail-fasts at preflight if the
+window's remaining allowance is non-positive, (b) caps the per-run
+governor's hard limit to `min(--budget, remaining)` so the router's
+tight-budget guard sees the smaller figure, and (c) records the actual
+spend after the run completes. The `--ignore-cross-run-cap` CLI flag
+bypasses (a) and (b) for documented emergencies; the resulting spend
+is still recorded with `forced=1` for audit.
+
 ## `telemetry`
 
 OpenTelemetry spans emit automatically. If

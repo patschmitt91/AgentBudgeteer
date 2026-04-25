@@ -12,6 +12,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   governed by `CONTRIBUTING.md` (PR checklist) and `SECURITY.md`
   (vulnerability reporting). No replacement.
 
+### Added
+
+- Cross-run rolling-window budget cap (ADR 0005). New optional
+  `[cross_run]` block in `config/policy.yaml`:
+  - `cap_usd: <float>` — opt-in. When set, every `budgeteer run`
+    consults a SQLite-backed `agentcore.budget.PersistentBudgetLedger`
+    and (a) refuses to start when the window is exhausted, (b) caps
+    the per-run governor's hard limit to the cross-run remaining so
+    the router's tight-budget guard sees the smaller of the two
+    figures, and (c) records the actual `cost_usd` after the run
+    completes. Default `null` keeps existing per-run-only behaviour.
+  - `window: monthly|daily` — UTC-keyed bucket. Default `monthly`
+    (`YYYY-MM`); `daily` uses `YYYY-MM-DD`.
+  - `db_path: <path>` — relative paths resolve against the policy
+    file. Defaults to `.budgeteer/cross_run.db`.
+- `budgeteer.budget.CrossRunBudgetConfig` + `load_cross_run(path)`.
+- New CLI flag `--ignore-cross-run-cap` for documented emergencies.
+  Skips the preflight check (logs WARNING) and records the actual
+  spend via `force_record(reason="--ignore-cross-run-cap")`, which
+  writes a `forced=1` row to `budget_window` for audit. Per-run
+  `--budget` still applies.
+- `tests/test_cross_run_budget.py` (3 tests):
+  - Two sequential `budgeteer run` invocations with a fake adapter:
+    the second is rejected at preflight with exit code 2 once the
+    window is exhausted, and no new row is written to the ledger.
+  - `--ignore-cross-run-cap` overrides a pre-seeded exhausted ledger
+    and writes a `forced=1` audit row.
+  - `[cross_run]` block omitted → no ledger opened, no
+    `cross_run.db` file created, existing behaviour preserved.
+
+### Changed
+
+- `agentcore` pin bumped from `v0.2.0` to `v0.4.0` (skipping `v0.3.0`
+  because AgentBudgeteer doesn't consume `agentcore.scan`). The new
+  release ships `agentcore.budget.PersistentBudgetLedger`; see
+  agentcore CHANGELOG for the full diff.
+- `[tool.uv.sources]` declares an editable override for sibling
+  `agentcore` checkouts so local dev works before tagged releases
+  are pushed. `uv sync` on a fresh clone still resolves from the
+  git pin in `[project.dependencies]`.
+- `budgeteer run` payload now includes a `cross_run` key when the
+  cap is active: `{window, spent_usd, cap_usd, effective_budget_usd}`.
+
 ### Hardening (per HARDENING_PROMPT.md)
 
 - **Phase 0** — infra refresh (uv pin, healthcheck fix, dependabot, codeql, lychee).

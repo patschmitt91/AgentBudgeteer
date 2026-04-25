@@ -23,7 +23,7 @@ classifiers = [
 
 dependencies = [
   "agent-framework-core>=1.1.1,<2",
-  "agentcore @ git+https://github.com/patschmitt91/agentcore.git@v0.2.0",
+  "agentcore @ git+https://github.com/patschmitt91/agentcore.git@v0.4.0",
   "anthropic>=0.40.0,<1",
   "openai>=1.50.0,<3",
   "pciv @ git+https://github.com/patschmitt91/PCIV.git@133864e1243f8af464a2072e38bbb6ec57bacd5d",
@@ -74,12 +74,15 @@ allow-direct-references = true
 [tool.uv]
 prerelease = "allow"
 
-# Local dev against a sibling PCIV checkout:
-#   uncomment the override below when PCIV is checked out at ../PCIV.
-#   `uv sync` on a fresh clone (without PCIV alongside) resolves pciv
-#   from the git pin in [project.dependencies].
+# Local dev against sibling checkouts:
+#   the editable overrides below are active by default and assume the
+#   trio layout (../agentcore and ../PCIV checked out alongside this
+#   repo). `uv sync` on a fresh clone without the siblings present will
+#   need the overrides commented out — at that point the git pins in
+#   [project.dependencies] take over.
 [tool.uv.sources]
-# pciv = { path = "../PCIV", editable = true }
+agentcore = { path = "../agentcore", editable = true }
+pciv = { path = "../PCIV", editable = true }
 
 [tool.ruff]
 line-length = 100

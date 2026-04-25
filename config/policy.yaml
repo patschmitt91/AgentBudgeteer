@@ -73,6 +73,18 @@ routing:
   pciv_min_reasoning_ratio: 0.60
   pciv_min_planning_depth: 5
 
+# Cross-run rolling-window cap (ADR 0005). Mounts a SQLite-backed
+# `agentcore.budget.PersistentBudgetLedger` so two `budgeteer run`
+# invocations from the same workspace share the cap. Comment out
+# `cap_usd` (or set to null) to disable cross-run enforcement; the
+# per-run `--budget` still applies. `window` is `monthly` (YYYY-MM, UTC)
+# or `daily` (YYYY-MM-DD, UTC). `db_path` is resolved relative to this
+# policy file unless absolute; defaults to `.budgeteer/cross_run.db`.
+cross_run:
+  cap_usd: 50.00
+  window: monthly
+  db_path: .budgeteer/cross_run.db
+
 # Degradation: if projected_cost > ratio * budget_remaining, swap
 # non-planning step models from the "from" list to "to".
 degradation:

@@ -114,6 +114,24 @@ All thresholds, pricing, projection coefficients, degradation rules, and
 classifier wordlists live in [config/policy.yaml](config/policy.yaml). Every
 key is documented in [docs/configuration.md](docs/configuration.md).
 
+### Cross-run budget enforcement
+
+Per-run `--budget` is a single-process cap. To bound spend across many
+sequential `budgeteer run` invocations, set `[cross_run].cap_usd` (and
+optionally `window` and `db_path`) in `policy.yaml`. The CLI mounts a
+SQLite-backed `agentcore.budget.PersistentBudgetLedger` and (a) refuses
+to start a run when the rolling window is exhausted, (b) caps the
+per-run governor's hard limit to the cross-run remaining so the
+router's tight-budget guard sees the smaller of the two figures, and
+(c) records the actual cost after the run completes. See
+[ADR-0005](docs/decisions/0005-cross-run-budget-ledger.md) and
+[tests/test_cross_run_budget.py](tests/test_cross_run_budget.py).
+
+For documented emergencies, `budgeteer run --ignore-cross-run-cap`
+skips the preflight check (the per-run `--budget` still applies),
+logs a WARNING, and records the spend with `forced=1` in the
+`budget_window` audit table.
+
 ## Benchmarks
 
 Routing-accuracy fixtures and the dry-run harness live under

@@ -77,7 +77,7 @@ learn = [
 [package.metadata]
 requires-dist = [
     { name = "agent-framework-core", specifier = ">=1.1.1,<2" },
-    { name = "agentcore", git = "https://github.com/patschmitt91/agentcore.git?rev=v0.2.0" },
+    { name = "agentcore", editable = "../agentcore" },
     { name = "anthropic", specifier = ">=0.40.0,<1" },
     { name = "azure-monitor-opentelemetry", specifier = ">=1.8.0,<2" },
     { name = "mypy", marker = "extra == 'dev'", specifier = "==1.20.2" },
@@ -85,7 +85,7 @@ requires-dist = [
     { name = "openai", specifier = ">=1.50.0,<3" },
     { name = "opentelemetry-api", specifier = ">=1.39.0,<2" },
     { name = "opentelemetry-sdk", specifier = ">=1.39.0,<2" },
-    { name = "pciv", git = "https://github.com/patschmitt91/PCIV.git?rev=133864e1243f8af464a2072e38bbb6ec57bacd5d" },
+    { name = "pciv", editable = "../PCIV" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = "==3.8.0" },
     { name = "pydantic", specifier = ">=2.9.0,<3" },
     { name = "pytest", marker = "extra == 'dev'", specifier = "==8.3.3" },
@@ -471,14 +471,27 @@ wheels = [
 
 [[package]]
 name = "agentcore"
-version = "0.2.0"
-source = { git = "https://github.com/patschmitt91/agentcore.git?rev=v0.2.0#0457cabf7efd5e6aac20fe78c030438adab7adf9" }
+version = "0.4.0"
+source = { editable = "../agentcore" }
 dependencies = [
     { name = "azure-identity" },
     { name = "openai" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-sdk" },
 ]
+
+[package.metadata]
+requires-dist = [
+    { name = "azure-identity", specifier = ">=1.17" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11" },
+    { name = "openai", specifier = ">=1.40" },
+    { name = "opentelemetry-api", specifier = ">=1.27" },
+    { name = "opentelemetry-sdk", specifier = ">=1.27" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
+]
+provides-extras = ["dev"]
 
 [[package]]
 name = "aiohappyeyeballs"
@@ -3036,7 +3049,7 @@ wheels = [
 [[package]]
 name = "pciv"
 version = "0.2.0"
-source = { git = "https://github.com/patschmitt91/PCIV.git?rev=133864e1243f8af464a2072e38bbb6ec57bacd5d#133864e1243f8af464a2072e38bbb6ec57bacd5d" }
+source = { editable = "../PCIV" }
 dependencies = [
     { name = "agent-framework" },
     { name = "agentcore" },
@@ -3047,6 +3060,27 @@ dependencies = [
     { name = "pyyaml" },
     { name = "typer" },
 ]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-framework", specifier = ">=1.0.0b1" },
+    { name = "agentcore", editable = "../agentcore" },
+    { name = "azure-monitor-opentelemetry", specifier = ">=1.6.0" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.13.0" },
+    { name = "openai", specifier = ">=1.54.0" },
+    { name = "opentelemetry-sdk", specifier = ">=1.30.0" },
+    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.8.0" },
+    { name = "pydantic", specifier = ">=2.9.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.0" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0.0" },
+    { name = "pyyaml", specifier = ">=6.0.2" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.7.0" },
+    { name = "twine", marker = "extra == 'dev'", specifier = ">=6.1.0" },
+    { name = "typer", specifier = ">=0.12.0" },
+    { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0.12" },
+]
+provides-extras = ["dev"]
 
 [[package]]
 name = "platformdirs"

@@ -5,7 +5,7 @@ from __future__ import annotations
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from agentcore.budget import BudgetExceeded as _CoreBudgetExceeded
@@ -102,6 +102,53 @@ def load_degradation(path: Path) -> DegradationConfig:
         trigger_ratio=float(block.get("trigger_ratio", 0.7)),
         swaps=tuple(swaps),
     )
+
+
+@dataclass(frozen=True)
+class CrossRunBudgetConfig:
+    """Configuration for the cross-run rolling-window cap (ADR 0005).
+
+    ``cap_usd is None`` disables the cross-run check entirely while
+    leaving the per-run governor in place. ``window`` selects the
+    rolling bucket (``daily`` or ``monthly``). ``db_path`` is resolved
+    relative to ``policy.yaml`` unless absolute; defaults to
+    ``.budgeteer/cross_run.db`` next to the policy file.
+    """
+
+    cap_usd: float | None
+    window: Literal["daily", "monthly"]
+    db_path: Path | None
+
+
+def load_cross_run(path: Path) -> CrossRunBudgetConfig:
+    """Parse the ``[cross_run]`` block from ``policy.yaml``.
+
+    The block is optional. An omitted block, or a block with
+    ``cap_usd`` unset / null, disables cross-run enforcement.
+    """
+
+    with path.open("r", encoding="utf-8") as f:
+        raw: dict[str, Any] = yaml.safe_load(f) or {}
+    block = raw.get("cross_run") or {}
+    cap = block.get("cap_usd")
+    cap_usd = float(cap) if cap is not None else None
+    window_raw = str(block.get("window", "monthly"))
+    if window_raw not in ("daily", "monthly"):
+        raise ValueError(
+            f"cross_run.window must be 'daily' or 'monthly', got {window_raw!r}"
+        )
+    window: Literal["daily", "monthly"] = (
+        "daily" if window_raw == "daily" else "monthly"
+    )
+    db_path_raw = block.get("db_path")
+    if db_path_raw is None:
+        db_path: Path | None = (
+            path.parent / ".budgeteer" / "cross_run.db" if cap_usd is not None else None
+        )
+    else:
+        db_candidate = Path(str(db_path_raw))
+        db_path = db_candidate if db_candidate.is_absolute() else path.parent / db_candidate
+    return CrossRunBudgetConfig(cap_usd=cap_usd, window=window, db_path=db_path)
 
 
 class BudgetGovernor:
