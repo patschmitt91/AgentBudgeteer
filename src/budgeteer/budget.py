@@ -232,11 +232,16 @@ def _sum_cost(
 ) -> float:
     if not plan:
         return 0.0
-    share_in = tokens_in // len(plan) if len(plan) > 0 else tokens_in
-    share_out = tokens_out // len(plan) if len(plan) > 0 else tokens_out
-    # Fleet fans out input to every worker, so charge full input per role.
+    share_in = tokens_in // len(plan)
+    share_out = tokens_out // len(plan)
+    # Fleet fans the same input out to every shard worker, so charge full
+    # input per role rather than splitting it. ``tokens_out`` was already
+    # projected as the sum across shards in ``_projected_output_tokens`` so
+    # we keep it un-divided when the plan is single-role to preserve the
+    # per-shard scaling. See harden/phase-2 audit item #4.
     if strategy == "fleet":
         share_in = tokens_in
+        share_out = tokens_out
     total = 0.0
     for model in plan.values():
         total += pricing.cost(model, share_in, share_out)

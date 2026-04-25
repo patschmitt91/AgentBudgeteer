@@ -42,6 +42,15 @@ _PCIV_CONFIG_OPT = typer.Option(
     "--pciv-config",
     help="Path to pciv plan.yaml (overrides the value in policy.yaml).",
 )
+_AUTO_APPROVE_PCIV_OPT = typer.Option(
+    False,
+    "--auto-approve-pciv-gates",
+    help=(
+        "Auto-approve every PCIV HITL gate. Required for unattended runs that "
+        "select the pciv strategy. Defaults to False; gates are rejected unless "
+        "this flag is supplied. See harden/phase-2 audit item #6."
+    ),
+)
 
 
 def _default_policy_path() -> Path:
@@ -281,6 +290,7 @@ def run(
     repo: Path | None = _REPO_OPT,
     policy: Path | None = _POLICY_OPT,
     pciv_config: Path | None = _PCIV_CONFIG_OPT,
+    auto_approve_pciv_gates: bool = _AUTO_APPROVE_PCIV_OPT,
 ) -> None:
     """Run a task through the router."""
 
@@ -301,6 +311,7 @@ def run(
         policy_path=policy_path,
         budget_cap_usd=budget,
         pciv_config_path=pciv_config,
+        auto_approve_pciv_gates=auto_approve_pciv_gates,
     )
 
     if dry_run:

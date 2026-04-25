@@ -14,6 +14,7 @@ by ``max_iter`` in the pciv config and ``reject`` surfaces as a failed
 
 from __future__ import annotations
 
+import logging
 import time
 from pathlib import Path
 
@@ -28,6 +29,8 @@ from budgeteer.strategies.base import Strategy
 from budgeteer.telemetry import strategy_span
 from budgeteer.types import ExecutionContext, ModelInvocation, StrategyResult
 
+_LOG = logging.getLogger(__name__)
+
 
 class PCIVStrategy(Strategy):
     """Wrapper around the pciv graph workflow."""
@@ -41,12 +44,14 @@ class PCIVStrategy(Strategy):
         governor: BudgetGovernor,
         task_id: str = "pciv",
         runner: PCIVRunner | None = None,
+        auto_approve_gates: bool = False,
     ) -> None:
         self._config_path = pciv_config_path
         self._pricing = pricing
         self._governor = governor
         self._task_id = task_id
         self._runner = runner or build_default_runner()
+        self._auto_approve_gates = auto_approve_gates
 
     def execute(self, task: str, context: ExecutionContext) -> StrategyResult:
         started = time.perf_counter()
@@ -80,6 +85,7 @@ class PCIVStrategy(Strategy):
             repo_path=str(context.repo_snapshot.root),
             config_path=self._config_path,
             ceiling_usd=max(self._governor.remaining, 1e-6),
+            auto_approve_gates=self._auto_approve_gates,
         )
 
         with strategy_span(
@@ -161,4 +167,13 @@ class PCIVStrategy(Strategy):
                 cfg.models.verifier.model_id(),
             )
         except Exception:
+            # Surface config drift instead of silently falling back. Cost
+            # projections downstream are computed against the returned model
+            # tuple, so a quiet fallback masks pricing/policy mismatches.
+            # See harden/phase-2 audit item #8.
+            _LOG.warning(
+                "pciv model resolution failed for %s; using defaults",
+                self._config_path,
+                exc_info=True,
+            )
             return _DEFAULTS

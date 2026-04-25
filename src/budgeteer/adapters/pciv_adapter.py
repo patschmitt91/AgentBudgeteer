@@ -30,6 +30,11 @@ class PCIVRunRequest:
     repo_path: str
     config_path: Path
     ceiling_usd: float
+    # ``True`` only when the operator has explicitly opted in (via the
+    # ``--auto-approve-pciv-gates`` CLI flag). HITL gates default to
+    # rejection so an unattended run cannot silently merge model output.
+    # See harden/phase-2 audit item #6.
+    auto_approve_gates: bool = False
 
 
 @dataclass(frozen=True)
@@ -78,8 +83,19 @@ def _role_for(model_id: str) -> str:
 
 
 async def _auto_approve_gate(_name: str, _payload: dict[str, Any]) -> str:
-    """Non-interactive HITL gate. Budgeteer runs pciv headlessly."""
+    """Approve every HITL gate. Used only when the operator opts in."""
     return "approve"
+
+
+async def _reject_gate(name: str, _payload: dict[str, Any]) -> str:
+    """Reject every HITL gate. Default for unattended Budgeteer runs."""
+    import logging  # noqa: PLC0415
+
+    logging.getLogger(__name__).info(
+        "pciv gate %r rejected: auto-approve not enabled (pass --auto-approve-pciv-gates)",
+        name,
+    )
+    return "reject"
 
 
 def build_default_runner() -> PCIVRunner:
@@ -136,7 +152,7 @@ def build_default_runner() -> PCIVRunner:
                     run_id=run_id,
                     tracer=tracer,
                     repo=Path(req.repo_path),
-                    gate_cb=_auto_approve_gate,
+                    gate_cb=(_auto_approve_gate if req.auto_approve_gates else _reject_gate),
                 )
                 outcome = asyncio.run(pipeline.run(task=req.task, max_iter=max_iter))
                 ledger.finalize_run(run_id, status=outcome.status)

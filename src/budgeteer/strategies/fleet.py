@@ -7,6 +7,7 @@ source of truth; on retry we can resume from the last unfinished shard.
 
 from __future__ import annotations
 
+import threading
 import time
 import uuid
 from concurrent.futures import Future, ThreadPoolExecutor
@@ -84,6 +85,14 @@ class FleetStrategy(Strategy):
         for i, description in enumerate(shards):
             self._ledger.add_shard(f"{run_id}:{i:03d}", run_id, description)
 
+        # Per-shard preflight: a single global preflight on the projected
+        # total can pass while N concurrent workers blow the cap before any
+        # spend is recorded. Charge the projection across shards so each
+        # worker has a cheap, conservative ceiling to test against before it
+        # makes its model call. See harden/phase-2 audit item #3.
+        per_shard_projected = projection.projected_cost_usd / len(shards) if shards else 0.0
+        abort_event = threading.Event()
+
         with strategy_span(
             self.name,
             self._task_id,
@@ -93,12 +102,22 @@ class FleetStrategy(Strategy):
             budget_remaining=float(context.budget_remaining),
             latency_target_seconds=int(context.latency_target_seconds),
         ) as span:
-            results = self._run_workers(run_id, manager, effective_model)
+            results = self._run_workers(
+                run_id, manager, effective_model, per_shard_projected, abort_event
+            )
 
             total_cost = sum(r.cost_usd for r in results)
+            # Spend was already recorded per-shard inside the worker loop so
+            # the per-shard preflight has live data to fence against. The
+            # block below remains as a defensive backstop only -- it should
+            # be a no-op in practice, but if a worker ever returned a
+            # WorkerResult without recording (e.g. failure path), this catches
+            # the residue.
+            already_recorded = sum(r.cost_usd for r in results if r.cost_usd > 0 and r.success)
+            residue = total_cost - already_recorded
             try:
-                if total_cost > 0:
-                    self._governor.record_spend(total_cost)
+                if residue > 0:
+                    self._governor.record_spend(residue)
             except BudgetExceeded as exc:
                 span.set_attribute("error", True)
                 span.set_attribute("error.message", str(exc))
@@ -148,6 +167,8 @@ class FleetStrategy(Strategy):
         run_id: str,
         manager: WorktreeManager,
         model: str,
+        per_shard_projected: float,
+        abort_event: threading.Event,
     ) -> list[WorkerResult]:
         def _one_worker(worker_id: str) -> list[WorkerResult]:
             local: list[WorkerResult] = []
@@ -160,12 +181,35 @@ class FleetStrategy(Strategy):
                 ledger=self._ledger,
             )
             while True:
+                if abort_event.is_set():
+                    return local
+                # Per-shard preflight against the live remaining budget. The
+                # first worker to fail it sets ``abort_event`` so peers stop
+                # claiming new shards rather than racing past the cap.
+                try:
+                    self._governor.check_can_start(per_shard_projected)
+                except BudgetExceeded:
+                    abort_event.set()
+                    return local
                 shard = self._ledger.claim_next(run_id, worker_id)
                 if shard is None:
                     return local
                 path = manager.provision(run_id, worker_id)
                 try:
-                    local.append(worker.run_shard(shard, worktree_path=str(path)))
+                    result = worker.run_shard(shard, worktree_path=str(path))
+                    local.append(result)
+                    # Record spend immediately so the next preflight can see
+                    # the real burn. Without this the governor's remaining
+                    # budget stays at its initial value for the entire fleet
+                    # run and per-shard preflight never aborts. If recording
+                    # itself trips the cap, we still keep the result on the
+                    # local list (the spend has been applied) and abort.
+                    if result.success and result.cost_usd > 0:
+                        try:
+                            self._governor.record_spend(result.cost_usd)
+                        except BudgetExceeded:
+                            abort_event.set()
+                            return local
                 finally:
                     # Single owner of the worktree lifecycle. No outer cleanup.
                     try:

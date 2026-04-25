@@ -98,3 +98,31 @@ def test_check_can_start_rejects_overrun() -> None:
     gov = BudgetGovernor(table, load_degradation(POLICY_PATH), hard_cap_usd=0.10)
     with pytest.raises(BudgetExceeded):
         gov.check_can_start(projected_cost_usd=0.25)
+
+
+def test_fleet_projection_scales_output_per_shard() -> None:
+    """Regression: `_sum_cost` must keep tokens_out un-divided for fleet.
+
+    Before Phase 2 the helper divided tokens_out by `len(plan)` even for
+    the fleet strategy. Since fleet's `_projected_output_tokens` already
+    sums output tokens across shards, dividing by the (single-role) plan
+    length silently halved the projection in larger plans.
+    """
+    table = PricingTable.from_yaml(POLICY_PATH)
+    gov = BudgetGovernor(table, load_degradation(POLICY_PATH), hard_cap_usd=100.0)
+    # Force a known-large output projection by setting a high file count
+    # (fleet shards == min(file_count, fleet_max_shards)).
+    features = _features(estimated_file_count=8, estimated_input_tokens=10_000)
+    projection = gov.project(
+        strategy="fleet",
+        features=features,
+        role_model_plan={"worker": "anthropic-fallback"},
+    )
+    # With a single-role plan for fleet, the projection must charge full
+    # input *and* full (per-shard summed) output -- not divided.
+    table_cost = table.cost(
+        "anthropic-fallback",
+        tokens_in=10_000,
+        tokens_out=projection.projected_tokens_out,
+    )
+    assert projection.projected_cost_usd == pytest.approx(table_cost)

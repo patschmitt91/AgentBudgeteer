@@ -39,6 +39,7 @@ class Router:
         adapter: AnthropicAdapter | None = None,
         pciv_config_path: Path | None = None,
         pciv_runner: PCIVRunner | None = None,
+        auto_approve_pciv_gates: bool = False,
     ) -> None:
         self._policy_path = policy_path
         self._policy = Policy.from_yaml(policy_path)
@@ -53,6 +54,7 @@ class Router:
         self._adapter = adapter
         self._pciv_config_path = pciv_config_path or _resolve_pciv_config(policy_path)
         self._pciv_runner = pciv_runner
+        self._auto_approve_pciv_gates = auto_approve_pciv_gates
 
     @property
     def policy(self) -> Policy:
@@ -120,6 +122,7 @@ class Router:
                 governor=self._governor,
                 task_id=task_id,
                 runner=self._pciv_runner,
+                auto_approve_gates=self._auto_approve_pciv_gates,
             )
         if decision.strategy == "fleet":
             adapter = self._adapter or AnthropicAdapter()
