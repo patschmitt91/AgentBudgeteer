@@ -45,6 +45,7 @@ version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "agent-framework-core" },
+    { name = "agentcore" },
     { name = "anthropic" },
     { name = "azure-monitor-opentelemetry" },
     { name = "openai" },
@@ -75,6 +76,7 @@ learn = [
 [package.metadata]
 requires-dist = [
     { name = "agent-framework-core", specifier = ">=1.1.1,<2" },
+    { name = "agentcore", git = "https://github.com/patschmitt91/agentcore.git?rev=v0.2.0" },
     { name = "anthropic", specifier = ">=0.40.0,<1" },
     { name = "azure-monitor-opentelemetry", specifier = ">=1.8.0,<2" },
     { name = "mypy", marker = "extra == 'dev'", specifier = "==1.11.2" },
@@ -464,6 +466,17 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/59/5a/f69abfca1e08b1d147ac3b8001aff4d634f5d0b34b2534c4dfed105e2b5c/agent_framework_redis-1.0.0b260424.tar.gz", hash = "sha256:7418046daf309cfa88c248867d04e6b678d8f73c5e7222fe8551250a67e46f7d", size = 10517, upload-time = "2026-04-24T10:57:12.136Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/20/c5/a5f6a9524dbdf1290a921d6cb80f73147e70f914a488786c48d2d9eceeb1/agent_framework_redis-1.0.0b260424-py3-none-any.whl", hash = "sha256:0eb578b2ea7f3f149d1d9c34e6876b69f17f7415412aacfb510357b3e48e083a", size = 10595, upload-time = "2026-04-24T10:57:28.912Z" },
+]
+
+[[package]]
+name = "agentcore"
+version = "0.2.0"
+source = { git = "https://github.com/patschmitt91/agentcore.git?rev=v0.2.0#0457cabf7efd5e6aac20fe78c030438adab7adf9" }
+dependencies = [
+    { name = "azure-identity" },
+    { name = "openai" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-sdk" },
 ]
 
 [[package]]
