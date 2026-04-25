@@ -248,9 +248,7 @@ from agentcore import telemetry as _core_telemetry  # noqa: E402
 
 
 def runs_total() -> Counter:
-    return _core_telemetry.get_counter(
-        _METER_NAME, "runs_total", description="Total runs started."
-    )
+    return _core_telemetry.get_counter(_METER_NAME, "runs_total", description="Total runs started.")
 
 
 def runs_failed_total() -> Counter:

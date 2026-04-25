@@ -361,9 +361,7 @@ def run(
     with _contextlib.suppress(Exception):
         latency_seconds_per_run().record(float(outcome.result.latency_seconds))
         cost_usd_per_run().record(float(outcome.result.cost_usd))
-        total_tokens = sum(
-            inv.tokens_in + inv.tokens_out for inv in outcome.result.model_trace
-        )
+        total_tokens = sum(inv.tokens_in + inv.tokens_out for inv in outcome.result.model_trace)
         tokens_per_run().record(int(total_tokens))
     if not outcome.result.success:
         runs_failed_total().add(1)
