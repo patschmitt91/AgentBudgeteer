@@ -23,6 +23,7 @@ classifiers = [
 
 dependencies = [
   "agent-framework-core>=1.1.1,<2",
+  "agentcore>=0.1.0,<0.2",
   "anthropic>=0.40.0,<1",
   "openai>=1.50.0,<3",
   "pciv @ git+https://github.com/patschmitt91/PCIV.git@5c04e8e88d4294a2549a05e49031137a1160e77e",
