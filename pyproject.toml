@@ -26,7 +26,7 @@ dependencies = [
   "agentcore @ git+https://github.com/patschmitt91/agentcore.git@v0.4.0",
   "anthropic>=0.40.0,<1",
   "openai>=1.50.0,<3",
-  "pciv @ git+https://github.com/patschmitt91/PCIV.git@133864e1243f8af464a2072e38bbb6ec57bacd5d",
+  "pciv @ git+https://github.com/patschmitt91/PCIV.git@f4ad854",
   "pydantic>=2.9.0,<3",
   "pyyaml>=6.0.2,<7",
   "typer>=0.16,<1",
@@ -75,14 +75,15 @@ allow-direct-references = true
 prerelease = "allow"
 
 # Local dev against sibling checkouts:
-#   the editable overrides below are active by default and assume the
-#   trio layout (../agentcore and ../PCIV checked out alongside this
-#   repo). `uv sync` on a fresh clone without the siblings present will
-#   need the overrides commented out — at that point the git pins in
-#   [project.dependencies] take over.
+#   `uv sync` resolves agentcore + pciv from the git pins in
+#   [project.dependencies] on a fresh clone and on CI. Uncomment the
+#   overrides below when iterating in-tree against ../agentcore /
+#   ../PCIV, and run `uv lock` to refresh the lockfile. Re-comment and
+#   re-lock before pushing so CI (which has no sibling checkout) resolves
+#   from the git pins.
 [tool.uv.sources]
-agentcore = { path = "../agentcore", editable = true }
-pciv = { path = "../PCIV", editable = true }
+# agentcore = { path = "../agentcore", editable = true }
+# pciv = { path = "../PCIV", editable = true }
 
 [tool.ruff]
 line-length = 100
