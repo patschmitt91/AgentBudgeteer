@@ -20,6 +20,7 @@ Patterns covered:
 from __future__ import annotations
 
 import logging
+import os
 import re
 from collections.abc import Mapping
 from typing import Any
@@ -60,10 +61,8 @@ _PATTERNS: tuple[re.Pattern[str], ...] = (
 )
 
 
-def _iter_env_secret_values() -> tuple[str, ...]:
+def _scan_env_secret_values() -> tuple[str, ...]:
     """Snapshot env values whose names hint at a secret, for literal masking."""
-
-    import os
 
     out: list[str] = []
     for name, value in os.environ.items():
@@ -76,6 +75,28 @@ def _iter_env_secret_values() -> tuple[str, ...]:
     # smaller ones get a chance to create partial overlaps.
     out.sort(key=len, reverse=True)
     return tuple(out)
+
+
+# Cached snapshot used on the redact() hot path. Refreshed lazily when the
+# env-var count changes, or eagerly via :func:`refresh_env_cache`. See
+# harden/phase-3 #3B (the cache exists because ledger writes now flow
+# through redact()).
+_ENV_SECRET_CACHE: tuple[str, ...] = ()
+_ENV_SECRET_CACHE_SIZE: int = -1
+
+
+def refresh_env_cache() -> None:
+    """Re-snapshot secret-bearing env vars; call after env mutation."""
+    global _ENV_SECRET_CACHE, _ENV_SECRET_CACHE_SIZE
+    _ENV_SECRET_CACHE = _scan_env_secret_values()
+    _ENV_SECRET_CACHE_SIZE = len(os.environ)
+
+
+def _iter_env_secret_values() -> tuple[str, ...]:
+    global _ENV_SECRET_CACHE_SIZE
+    if len(os.environ) != _ENV_SECRET_CACHE_SIZE:
+        refresh_env_cache()
+    return _ENV_SECRET_CACHE
 
 
 def redact(text: str) -> str:

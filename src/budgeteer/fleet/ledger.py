@@ -33,11 +33,13 @@ CREATE TABLE IF NOT EXISTS shards (
     tokens_in INTEGER NOT NULL DEFAULT 0,
     tokens_out INTEGER NOT NULL DEFAULT 0,
     error TEXT,
-    FOREIGN KEY (run_id) REFERENCES runs(run_id)
+    FOREIGN KEY (run_id) REFERENCES runs(run_id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_shards_run_status ON shards(run_id, status);
 """
+
+_SCHEMA_VERSION = 2
 
 
 @dataclass(frozen=True)
@@ -65,6 +67,14 @@ class ShardLedger:
         if not is_memory:
             Path(self._path).parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(self._path, check_same_thread=False, isolation_level=None)
+        # Concurrency + integrity tuning. Run BEFORE schema init.
+        # See harden/phase-3 #3A.
+        if not is_memory:
+            self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA synchronous=NORMAL")
+        self._conn.execute("PRAGMA busy_timeout=5000")
+        self._conn.execute("PRAGMA foreign_keys=ON")
+        self._conn.execute(f"PRAGMA user_version={_SCHEMA_VERSION}")
         self._conn.executescript(_SCHEMA)
 
     def close(self) -> None:
@@ -138,18 +148,26 @@ class ShardLedger:
         tokens_out: int,
         worktree_path: str | None,
     ) -> None:
+        from budgeteer.redaction import redact
+
+        # Worker output may echo prompts containing secrets; scrub at the
+        # ledger boundary. See harden/phase-3 #3B.
+        safe_result = redact(result_text) if result_text else result_text
         with self._lock:
             self._conn.execute(
                 "UPDATE shards SET status='done', result_text=?, cost_usd=?, "
                 "tokens_in=?, tokens_out=?, worktree_path=? WHERE shard_id=?",
-                (result_text, cost_usd, tokens_in, tokens_out, worktree_path, shard_id),
+                (safe_result, cost_usd, tokens_in, tokens_out, worktree_path, shard_id),
             )
 
     def fail_shard(self, shard_id: str, error: str) -> None:
+        from budgeteer.redaction import redact
+
+        safe_error = redact(error) if error else error
         with self._lock:
             self._conn.execute(
                 "UPDATE shards SET status='error', error=? WHERE shard_id=?",
-                (error, shard_id),
+                (safe_error, shard_id),
             )
 
     def list_shards(self, run_id: str) -> list[Shard]:

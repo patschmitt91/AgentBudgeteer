@@ -27,7 +27,7 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
 
-from budgeteer.redaction import RedactionFilter, redact
+from budgeteer.redaction import RedactionFilter, redact, refresh_env_cache
 
 _LOG = logging.getLogger(__name__)
 _TRACER_NAME = "agent-budgeteer"
@@ -204,6 +204,9 @@ def configure_logging(
     :class:`~budgeteer.redaction.RedactionFilter` so secret-shaped
     substrings are scrubbed before a record is emitted.
     """
+
+    # Snapshot env-secrets before the first record is emitted.
+    refresh_env_cache()
 
     global _logging_configured
     root = logging.getLogger()
