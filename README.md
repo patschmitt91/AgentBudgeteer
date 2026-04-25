@@ -13,9 +13,16 @@ of [microsoft/agent-framework][af].
 
 ## Status
 
-Alpha / research prototype, v0.1.0. Routing pipeline and three strategies are
-wired end-to-end; adapters are exercised with mocks in tests. No live-provider
-benchmark numbers yet — see [docs/roadmap.md](docs/roadmap.md).
+Alpha / research prototype, v0.2.0. Routing pipeline and three strategies
+are wired end-to-end; adapters are exercised with mocks in tests (103
+tests, 89% coverage). The first live-provider micro-bench is scaffolded
+under [`bench/live/`](bench/live/README.md) but no cassette has been
+recorded yet — see that README for the gated recording protocol (AB-6).
+
+v0.2 added the cross-run rolling-window budget cap
+([ADR-0005](docs/decisions/0005-cross-run-budget-ledger.md)) so 100
+sequential `budgeteer run` invocations can no longer blow a monthly
+budget while every individual run respects its per-run cap.
 
 ## What it does
 
@@ -134,16 +141,23 @@ logs a WARNING, and records the spend with `forced=1` in the
 
 ## Benchmarks
 
-Routing-accuracy fixtures and the dry-run harness live under
-[bench/](bench/README.md). End-to-end live-provider results will be published
-under `bench/results/` once the runner executes against a live adapter
-(tracked in the roadmap as v0.2).
+Two bench surfaces:
+
+- **Routing-accuracy.** Ten dry-run fixture tasks under
+  [bench/](bench/README.md) regression-test the policy decision tree
+  with no model calls.
+- **Live-provider micro-bench (AB-6).** Hand-rolled cassette format
+  under [bench/live/](bench/live/README.md). Replay-by-default runs in
+  CI; live recording is gated behind `BENCH_LIVE=1` and a per-task
+  `PersistentBudgetLedger` hard cap. The first task fixture targets
+  `anthropic-fallback` with a $0.05 cap; no cassette has been recorded
+  yet, so the replay test currently skips with a clear reason.
 
 ## Roadmap
 
 Dated milestones live in [docs/roadmap.md](docs/roadmap.md). The next
-milestone (v0.2) is the learned decision-tree policy trained on bench
-outcomes plus live-provider bench results.
+milestone (v0.3) is the learned decision-tree policy trained on bench
+outcomes plus the first recorded live cassettes.
 
 ## Development
 
