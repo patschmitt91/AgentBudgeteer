@@ -421,9 +421,7 @@ def run(
         # path uses ``force_record`` so the row is marked ``forced=1``
         # for audit.
         if cross_run_ledger is not None:
-            actual_spend = (
-                float(outcome.result.cost_usd) if outcome is not None else 0.0
-            )
+            actual_spend = float(outcome.result.cost_usd) if outcome is not None else 0.0
             try:
                 if ignore_cross_run_cap:
                     cross_run_ledger.force_record(
@@ -432,9 +430,7 @@ def run(
                     )
                 else:
                     try:
-                        cross_run_ledger.record_spend(
-                            actual_spend, note=task[:64]
-                        )
+                        cross_run_ledger.record_spend(actual_spend, note=task[:64])
                     except _CoreBudgetExceeded:
                         pass
             finally:

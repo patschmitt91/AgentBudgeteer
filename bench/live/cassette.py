@@ -201,9 +201,7 @@ class CassetteAdapter:
                 f"{len(self._cassette.calls)} recorded"
             )
         call = self._cassette.calls[self._cursor]
-        actual = _serialize_request(
-            messages, model=model, max_tokens=max_tokens, system=system
-        )
+        actual = _serialize_request(messages, model=model, max_tokens=max_tokens, system=system)
         expected_key = _request_match_key(call.request)
         actual_key = _request_match_key(actual)
         if expected_key != actual_key:

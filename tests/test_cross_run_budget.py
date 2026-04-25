@@ -81,8 +81,7 @@ def _read_budget_window_rows(db_path: Path) -> list[tuple[float, int, str | None
         return [
             (float(r[0]), int(r[1]), r[2])
             for r in conn.execute(
-                "SELECT amount_usd, forced, note FROM budget_window "
-                "ORDER BY rowid"
+                "SELECT amount_usd, forced, note FROM budget_window ORDER BY rowid"
             ).fetchall()
         ]
     finally:
@@ -107,9 +106,7 @@ def test_cross_run_cap_rejects_second_invocation_when_window_exhausted(
     repo.mkdir()
     db_path = tmp_path / "cross_run.db"
     test_policy = tmp_path / "policy.yaml"
-    _write_test_policy(
-        POLICY_PATH, test_policy, cap_usd=_MONTHLY_CAP_USD, cross_run_db=db_path
-    )
+    _write_test_policy(POLICY_PATH, test_policy, cap_usd=_MONTHLY_CAP_USD, cross_run_db=db_path)
 
     runner = CliRunner()
 
@@ -138,9 +135,7 @@ def test_cross_run_cap_rejects_second_invocation_when_window_exhausted(
     assert payload1["cross_run"]["spent_usd"] == pytest.approx(0.0)
     # effective_budget_usd should be capped to the cross-run remaining
     # (= cap, since spent is 0 going in).
-    assert payload1["cross_run"]["effective_budget_usd"] == pytest.approx(
-        _MONTHLY_CAP_USD
-    )
+    assert payload1["cross_run"]["effective_budget_usd"] == pytest.approx(_MONTHLY_CAP_USD)
 
     rows_after_run_1 = _read_budget_window_rows(db_path)
     assert len(rows_after_run_1) == 1
@@ -157,9 +152,7 @@ def test_cross_run_cap_rejects_second_invocation_when_window_exhausted(
     # rejection deterministic regardless of fixture-spend rounding.
     from agentcore.budget import PersistentBudgetLedger
 
-    with PersistentBudgetLedger(
-        db_path, cap_usd=_MONTHLY_CAP_USD, window="monthly"
-    ) as seed:
+    with PersistentBudgetLedger(db_path, cap_usd=_MONTHLY_CAP_USD, window="monthly") as seed:
         # Top up to exactly the cap so remaining == 0 on next preflight.
         topup = max(0.0, _MONTHLY_CAP_USD - seed.spent_in_current_window())
         if topup > 0:
@@ -196,17 +189,13 @@ def test_ignore_cross_run_cap_overrides_rejection_and_marks_row_forced(
     repo.mkdir()
     db_path = tmp_path / "cross_run.db"
     test_policy = tmp_path / "policy.yaml"
-    _write_test_policy(
-        POLICY_PATH, test_policy, cap_usd=_MONTHLY_CAP_USD, cross_run_db=db_path
-    )
+    _write_test_policy(POLICY_PATH, test_policy, cap_usd=_MONTHLY_CAP_USD, cross_run_db=db_path)
 
     # Pre-seed the ledger to simulate a prior run that exhausted the cap.
     from agentcore.budget import PersistentBudgetLedger
 
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    with PersistentBudgetLedger(
-        db_path, cap_usd=_MONTHLY_CAP_USD, window="monthly"
-    ) as seed:
+    with PersistentBudgetLedger(db_path, cap_usd=_MONTHLY_CAP_USD, window="monthly") as seed:
         seed.charge(_MONTHLY_CAP_USD, note="prior-run-seed")
 
     _patch_anthropic_adapter(monkeypatch)

@@ -134,12 +134,8 @@ def load_cross_run(path: Path) -> CrossRunBudgetConfig:
     cap_usd = float(cap) if cap is not None else None
     window_raw = str(block.get("window", "monthly"))
     if window_raw not in ("daily", "monthly"):
-        raise ValueError(
-            f"cross_run.window must be 'daily' or 'monthly', got {window_raw!r}"
-        )
-    window: Literal["daily", "monthly"] = (
-        "daily" if window_raw == "daily" else "monthly"
-    )
+        raise ValueError(f"cross_run.window must be 'daily' or 'monthly', got {window_raw!r}")
+    window: Literal["daily", "monthly"] = "daily" if window_raw == "daily" else "monthly"
     db_path_raw = block.get("db_path")
     if db_path_raw is None:
         db_path: Path | None = (

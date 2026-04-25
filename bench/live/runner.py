@@ -75,8 +75,7 @@ class LiveBenchTask:
         provider = str(raw["provider"])
         if provider not in ("anthropic", "azure_openai"):
             raise ValueError(
-                f"task {path}: provider must be 'anthropic' or 'azure_openai', "
-                f"got {provider!r}"
+                f"task {path}: provider must be 'anthropic' or 'azure_openai', got {provider!r}"
             )
         return cls(
             id=str(raw["id"]),
@@ -134,9 +133,7 @@ def run_replay(
 
     cassette = Cassette.load(cassette_path)
     if cassette.task_id != task.id:
-        raise ValueError(
-            f"cassette task_id {cassette.task_id!r} != task.id {task.id!r}"
-        )
+        raise ValueError(f"cassette task_id {cassette.task_id!r} != task.id {task.id!r}")
     adapter = CassetteAdapter(cassette)
     return _run_with_adapter(
         task,
@@ -173,9 +170,7 @@ def run_live(
     from budgeteer.pricing import PricingTable as _PT
 
     if not os.environ.get("ANTHROPIC_API_KEY"):
-        raise RuntimeError(
-            "ANTHROPIC_API_KEY not set; refusing to attempt a live recording."
-        )
+        raise RuntimeError("ANTHROPIC_API_KEY not set; refusing to attempt a live recording.")
 
     LEDGER_DIR.mkdir(parents=True, exist_ok=True)
     ledger_path = LEDGER_DIR / f"{task.id}.db"
@@ -185,12 +180,8 @@ def run_live(
         return pricing.cost(task.model, tokens_in, tokens_out)
 
     inner = AnthropicAdapter()
-    cassette = new_cassette(
-        task_id=task.id, provider=task.provider, model=task.model
-    )
-    with PersistentBudgetLedger(
-        ledger_path, cap_usd=task.cost_cap_usd, window="daily"
-    ) as ledger:
+    cassette = new_cassette(task_id=task.id, provider=task.provider, model=task.model)
+    with PersistentBudgetLedger(ledger_path, cap_usd=task.cost_cap_usd, window="daily") as ledger:
 
         def charge(amount_usd: float) -> None:
             # ``charge`` raises BudgetExceeded if the new total would
@@ -341,9 +332,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 2
         print(f"[replay] {task.id} from {cassette_path.name}")
-        report = run_replay(
-            task, cassette_path=cassette_path, policy_path=args.policy
-        )
+        report = run_replay(task, cassette_path=cassette_path, policy_path=args.policy)
 
     print(
         f"  strategy={report.actual_strategy} "
