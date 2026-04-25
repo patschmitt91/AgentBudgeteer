@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- `CODE_OF_CONDUCT.md`. The project's contribution surface is
+  governed by `CONTRIBUTING.md` (PR checklist) and `SECURITY.md`
+  (vulnerability reporting). No replacement.
+
 ### Hardening (per HARDENING_PROMPT.md)
 
 - **Phase 0** — infra refresh (uv pin, healthcheck fix, dependabot, codeql, lychee).
