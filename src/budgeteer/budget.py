@@ -8,13 +8,18 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from agentcore.budget import BudgetExceeded as _CoreBudgetExceeded
 
 from budgeteer.pricing import PricingTable
 from budgeteer.types import Features
 
 
-class BudgetExceeded(Exception):
-    """Raised when projected or actual spend exceeds the configured cap."""
+class BudgetExceeded(_CoreBudgetExceeded):
+    """AgentBudgeteer alias of :class:`agentcore.budget.BudgetExceeded`.
+
+    Subclasses the shared base so cross-project tooling can catch with the
+    common type while AB-internal code keeps the historical name.
+    """
 
 
 @dataclass(frozen=True)

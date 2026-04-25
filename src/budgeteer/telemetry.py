@@ -237,39 +237,31 @@ def configure_logging(
 
 
 # ---------------------------------------------------------------------------
-# Metrics (counters only)
+# Metrics
 # ---------------------------------------------------------------------------
+#
+# Counter and histogram caches live in :mod:`agentcore.telemetry`; the
+# accessors below are thin name-bound wrappers so callers keep the same
+# import surface.
 
-
-_counters: dict[str, Counter] = {}
-_meter_provider_override: metrics.MeterProvider | None = None
-
-
-def _meter() -> metrics.Meter:
-    if _meter_provider_override is not None:
-        return _meter_provider_override.get_meter(_METER_NAME)
-    return metrics.get_meter(_METER_NAME)
-
-
-def _counter(name: str, *, unit: str = "1", description: str = "") -> Counter:
-    existing = _counters.get(name)
-    if existing is not None:
-        return existing
-    c = _meter().create_counter(name=name, unit=unit, description=description)
-    _counters[name] = c
-    return c
+from agentcore import telemetry as _core_telemetry  # noqa: E402
 
 
 def runs_total() -> Counter:
-    return _counter("runs_total", description="Total runs started.")
+    return _core_telemetry.get_counter(
+        _METER_NAME, "runs_total", description="Total runs started."
+    )
 
 
 def runs_failed_total() -> Counter:
-    return _counter("runs_failed_total", description="Runs that ended in failure.")
+    return _core_telemetry.get_counter(
+        _METER_NAME, "runs_failed_total", description="Runs that ended in failure."
+    )
 
 
 def budget_usd_spent_total() -> Counter:
-    return _counter(
+    return _core_telemetry.get_counter(
+        _METER_NAME,
         "budget_usd_spent_total",
         unit="USD",
         description="Cumulative USD spent across runs.",
@@ -277,30 +269,56 @@ def budget_usd_spent_total() -> Counter:
 
 
 def routing_decisions_total() -> Counter:
-    return _counter(
+    return _core_telemetry.get_counter(
+        _METER_NAME,
         "routing_decisions_total",
         description="Routing decisions by strategy.",
     )
 
 
+def cost_usd_per_run() -> metrics.Histogram:
+    return _core_telemetry.get_histogram(
+        _METER_NAME,
+        "cost_usd_per_run",
+        unit="USD",
+        description="USD spent on a single run, recorded once per terminal status.",
+    )
+
+
+def latency_seconds_per_run() -> metrics.Histogram:
+    return _core_telemetry.get_histogram(
+        _METER_NAME,
+        "latency_seconds_per_run",
+        unit="s",
+        description="Wall-clock seconds from CLI run start to terminal status.",
+    )
+
+
+def tokens_per_run() -> metrics.Histogram:
+    return _core_telemetry.get_histogram(
+        _METER_NAME,
+        "tokens_per_run",
+        description="Total tokens (input+output) charged across a single run.",
+    )
+
+
 def reset_counters_for_tests() -> None:
-    """Clear the module-level counter cache.
+    """Clear the shared instrument cache (counters and histograms).
 
     Tests that swap the global ``MeterProvider`` via
     :func:`opentelemetry.metrics.set_meter_provider` must call this so
-    counters are re-created against the new provider.
+    instruments are re-created against the new provider.
     """
 
-    _counters.clear()
+    _core_telemetry.reset_for_tests()
 
 
 def set_meter_provider_for_tests(provider: metrics.MeterProvider | None) -> None:
-    """Override the meter provider used by the module-level counters.
+    """Override the meter provider used by the module-level instruments.
 
     OpenTelemetry's global ``set_meter_provider`` is set-once, so tests
     use this hook instead to inject an in-memory ``MeterProvider``.
+    Delegates to :func:`agentcore.telemetry.set_meter_provider_for_tests`.
     """
 
-    global _meter_provider_override
-    _meter_provider_override = provider
-    _counters.clear()
+    _core_telemetry.set_meter_provider_for_tests(provider)
