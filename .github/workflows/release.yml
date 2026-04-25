@@ -126,7 +126,7 @@ jobs:
             ${{ steps.tag.outputs.image }}:latest
 
       - name: Trivy image scan (fail on HIGH/CRITICAL)
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: ${{ steps.tag.outputs.image }}:${{ steps.tag.outputs.tag }}
           severity: HIGH,CRITICAL
