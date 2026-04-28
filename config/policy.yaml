@@ -81,9 +81,9 @@ routing:
 # or `daily` (YYYY-MM-DD, UTC). `db_path` is resolved relative to this
 # policy file unless absolute; defaults to `.budgeteer/cross_run.db`.
 cross_run:
-  cap_usd: 50.00
+  cap_usd: 60.00
   window: monthly
-  db_path: .budgeteer/cross_run.db
+  db_path: ../../PCIV/.pciv/ledger.db
 
 # Degradation: if projected_cost > ratio * budget_remaining, swap
 # non-planning step models from the "from" list to "to".
