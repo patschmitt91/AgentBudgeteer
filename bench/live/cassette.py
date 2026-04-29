@@ -61,14 +61,37 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from agentcore.redaction import redact
+
 from budgeteer.adapters.anthropic_adapter import (
     AdapterMessage,
     AdapterResponse,
-    AnthropicAdapter,
     OnTextCallback,
+    StreamingChatClient,
 )
 
 CASSETTE_SCHEMA_VERSION = 1
+
+
+def _redact_payload(obj: Any) -> Any:
+    """Recursively redact secret-shaped strings in a JSON-serialisable payload.
+
+    ``agentcore.redaction.redact_mapping`` only walks mappings; cassettes
+    contain lists (``messages``, ``calls``) so we need a structural walker.
+    Strings pass through ``redact()`` (regex patterns + cached env-var
+    literal scrubbing); other primitives pass through untouched.
+
+    Applied at ``Cassette.save`` time as the single chokepoint before the
+    file hits disk. See v0.3 plan, TODO #1(b).
+    """
+
+    if isinstance(obj, str):
+        return redact(obj)
+    if isinstance(obj, dict):
+        return {k: _redact_payload(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_redact_payload(v) for v in obj]
+    return obj
 
 
 @dataclass
@@ -127,6 +150,10 @@ class Cassette:
             "totals": asdict(self.totals),
             "calls": [asdict(c) for c in self.calls],
         }
+        # Single chokepoint: redact every string leaf before write so a
+        # leaked sk-/bearer/JWT shape or a secret env-var literal can't
+        # land in a committed cassette. v0.3 plan TODO #1(b).
+        payload = _redact_payload(payload)
         path.write_text(
             json.dumps(payload, indent=2, sort_keys=False) + "\n",
             encoding="utf-8",
@@ -231,6 +258,11 @@ class CassetteMismatch(RuntimeError):
 class RecordingAdapter:
     """Wraps a real adapter, captures every call into a fresh cassette.
 
+    Provider-agnostic: ``inner`` only needs to satisfy the
+    ``StreamingChatClient`` Protocol. Today both ``AnthropicAdapter``
+    and ``AzureOpenAIAdapter`` qualify; future adapters that match the
+    ``get_response`` signature will too.
+
     Cost enforcement: the caller passes a ``charge`` callable that takes
     the per-call cost in USD and may raise ``BudgetExceeded``. We invoke
     it BEFORE recording the call so a cap-breach short-circuits without
@@ -241,7 +273,7 @@ class RecordingAdapter:
 
     def __init__(
         self,
-        inner: AnthropicAdapter,
+        inner: StreamingChatClient,
         cassette: Cassette,
         *,
         cost_for_call: callable[[int, int], float],

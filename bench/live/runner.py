@@ -123,6 +123,41 @@ def _resolve_policy_path(policy_arg: Path | None) -> Path:
     return REPO_DIR / "config" / "policy.yaml"
 
 
+def _build_live_adapter(provider: str) -> Any:
+    """Construct the real adapter for ``provider`` after env-var checks.
+
+    Raises ``RuntimeError`` if required env vars are missing so a live
+    recording cannot accidentally proceed without credentials. This is
+    the single chokepoint where provider strings turn into adapter
+    instances; ``run_live`` does not import provider SDKs directly.
+    """
+
+    if provider == "anthropic":
+        # Imported locally so replay-only callers do not need the SDK.
+        from budgeteer.adapters.anthropic_adapter import AnthropicAdapter
+
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            raise RuntimeError(
+                "ANTHROPIC_API_KEY not set; refusing to attempt a live recording."
+            )
+        return AnthropicAdapter()
+    if provider == "azure_openai":
+        from budgeteer.adapters.azure_openai_adapter import AzureOpenAIAdapter
+
+        missing = [
+            v
+            for v in ("AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY")
+            if not os.environ.get(v)
+        ]
+        if missing:
+            raise RuntimeError(
+                f"{', '.join(missing)} not set; refusing to attempt a live "
+                f"Azure OpenAI recording."
+            )
+        return AzureOpenAIAdapter()
+    raise ValueError(f"unsupported provider for live recording: {provider!r}")
+
+
 def run_replay(
     task: LiveBenchTask,
     *,
@@ -159,18 +194,9 @@ def run_live(
     cassette in-memory but does NOT write it to disk.
     """
 
-    if task.provider != "anthropic":
-        raise NotImplementedError(
-            f"only provider='anthropic' is wired for live runs in this "
-            f"session; got {task.provider!r}. Add the Azure OpenAI live "
-            f"recorder before extending."
-        )
-    # Imported locally so replay-only callers do not need the SDK.
-    from budgeteer.adapters.anthropic_adapter import AnthropicAdapter
+    inner = _build_live_adapter(task.provider)
+    # Imported locally so replay-only callers do not pull in pricing setup.
     from budgeteer.pricing import PricingTable as _PT
-
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        raise RuntimeError("ANTHROPIC_API_KEY not set; refusing to attempt a live recording.")
 
     LEDGER_DIR.mkdir(parents=True, exist_ok=True)
     ledger_path = LEDGER_DIR / f"{task.id}.db"
@@ -179,7 +205,6 @@ def run_live(
     def cost_for_call(tokens_in: int, tokens_out: int) -> float:
         return pricing.cost(task.model, tokens_in, tokens_out)
 
-    inner = AnthropicAdapter()
     cassette = new_cassette(task_id=task.id, provider=task.provider, model=task.model)
     with PersistentBudgetLedger(ledger_path, cap_usd=task.cost_cap_usd, window="daily") as ledger:
 

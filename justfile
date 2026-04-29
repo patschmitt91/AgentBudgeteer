@@ -30,6 +30,11 @@ test:
 cov:
     uv run pytest --cov=src/budgeteer --cov-report=term-missing --cov-report=xml
 
+# Smoke the v0.3 four-arm SWE-bench harness with stub adapters.
+# Writes bench/results/smoke/results.json. No live API calls; safe to run.
+bench-smoke n="5":
+    uv run python -m bench.swe_bench.runner --n {{n}}
+
 # Build sdist + wheel into dist/.
 build:
     uv build

@@ -1,0 +1,45 @@
+# AB-6 micro-bench task 02 — Azure OpenAI variant of task 01.
+#
+# Mirrors task_01 but routes through the AzureOpenAIAdapter so the
+# replay-from-cassette story covers the v0.3 Azure-only pivot. Same
+# prompt + same expected_strategy so a side-by-side diff of the two
+# cassettes shows only provider-shaped fields, not behaviour drift.
+
+id: task_02_reverse_string_azure
+description: >
+  One short, deterministic-shape coding question routed through the
+  SingleAgent strategy against Azure OpenAI. Used to prove the Azure
+  cassette + replay loop with a single real provider call.
+
+# Free-form prompt sent to the model. Keep verbatim with task 01 so the
+# two cassettes are comparable.
+task_prompt: >
+  Write a Python function `reverse_string(s: str) -> str` that returns
+  its input reversed. Include one doctest covering the empty string.
+  Return only the function source.
+
+# Provider + model. The model field is the Azure OpenAI deployment
+# name (NOT a base model id). The runner's pricing lookup uses this
+# verbatim against config/policy.yaml's pricing block. Must match the
+# model the SingleAgent strategy actually invokes (driven by
+# `model_defaults.single_agent_primary` in policy.yaml) so the
+# RecordingAdapter's per-call cost accounting agrees with the
+# strategy's own pricing lookup. Today that's `azure-reasoning`
+# ($2.50 / $10.00 per MTok); ~$0.0003 actual spend at 42 in / 18 out.
+provider: azure_openai
+model: azure-reasoning
+
+# What strategy the policy decision tree should pick for this task.
+expected_strategy: single
+
+# Hard ceiling on per-task spend. Enforced by PersistentBudgetLedger
+# (window=daily) BEFORE recording each cassette entry. A breach raises
+# BudgetExceeded and the partial cassette is discarded.
+cost_cap_usd: 0.05
+
+# Per-run --budget passed to the Router. Larger than cost_cap_usd so the
+# per-run governor never trips first.
+per_run_budget_usd: 0.20
+
+# Latency target handed to the policy router.
+max_latency_seconds: 60

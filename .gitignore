@@ -18,3 +18,5 @@ bench/results.json
 *.db
 # Live-bench per-task cap ledgers (per AB-6). Recreated on every run.
 bench/live/.ledger/
+# v0.3 four-arm SWE-bench harness output (smoke + live runs).
+bench/results/

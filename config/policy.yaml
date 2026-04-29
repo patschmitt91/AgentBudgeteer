@@ -27,14 +27,27 @@ pricing:
   azure-codegen:
     input_per_mtok: 1.25
     output_per_mtok: 5.00
+  # PCIV's plan.yaml exposes Azure deployment names (e.g. `gpt-4o`)
+  # rather than Budgeteer's logical model names. PCIVStrategy reads
+  # those deployment ids and projects cost against this table; without
+  # an entry for the deployment id, projection raises KeyError. Mirror
+  # PCIV plan.yaml's gpt-4o rates here so projection works against the
+  # production PCIV config without touching PCIV.
+  gpt-4o:
+    input_per_mtok: 2.50
+    output_per_mtok: 10.00
 
 # Defaults used by strategies if no override is supplied.
+# v0.3: Microsoft-first. All defaults are Azure OpenAI deployments.
+# The `anthropic-*` pricing entries above are kept for back-compat with
+# tests and the existing AB-6 cassette schema, but the default routing
+# topology no longer selects them.
 model_defaults:
-  single_agent_primary: anthropic-primary
-  single_agent_fallback: anthropic-fallback
+  single_agent_primary: azure-reasoning
+  single_agent_fallback: azure-codegen
   pciv_planner: azure-reasoning
   pciv_implementer: azure-codegen
-  fleet_worker: anthropic-fallback
+  fleet_worker: azure-codegen
 
 # Path to the pciv project's config file. Resolved relative to this policy
 # file unless absolute. Used by the PCIV strategy.
@@ -87,9 +100,17 @@ cross_run:
 
 # Degradation: if projected_cost > ratio * budget_remaining, swap
 # non-planning step models from the "from" list to "to".
+# v0.3: Microsoft-first - the Azure rule covers the production routing
+# topology. The Anthropic rule is preserved so the existing degradation
+# regression tests (test_budget.py, test_single_agent.py) keep covering
+# the swap path. Both rules are evaluated; the model the strategy
+# actually uses determines which swap (if any) applies.
 degradation:
   trigger_ratio: 0.70
   swap:
+    - from: azure-reasoning
+      to: azure-codegen
+      protect_roles: ["planner", "critic"]
     - from: anthropic-primary
       to: anthropic-fallback
       protect_roles: ["planner", "critic"]
